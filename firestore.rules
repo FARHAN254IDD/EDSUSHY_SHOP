@@ -1,0 +1,36 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow public read on products
+    match /products/{document=**} {
+      allow read: if request.auth != null;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // User data security
+    match /users/{userId} {
+      // Ensure the request is authenticated before checking uid or admin flag
+      allow read, update: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      allow create: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Orders - users can see their own, admins can see all
+    match /orders/{orderId} {
+      allow read: if isOwner(orderId) || isAdmin();
+      allow create: if request.auth != null;
+      allow update, delete: if isAdmin();
+    }
+
+    // Helper functions
+    function isAdmin() {
+      return request.auth != null && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function isOwner(orderId) {
+      return request.auth != null && 
+             get(/databases/$(database)/documents/orders/$(orderId)).data.userId == request.auth.uid;
+    }
+  }
+}

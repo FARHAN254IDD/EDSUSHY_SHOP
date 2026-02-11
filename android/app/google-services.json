@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "507823611338",
+    "project_id": "edsushy-shop",
+    "storage_bucket": "edsushy-shop.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:507823611338:android:dd110d0c50f90c3a5b0333",
+        "android_client_info": {
+          "package_name": "com.farhan.edsushyshop"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "507823611338-agekb477jlpd3l4m68m0kesomg0phbuf.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.farhan.edsushyshop",
+            "certificate_hash": "5e3c730d73d926f1649e38c90a7fcd7482b2a9ad"
+          }
+        },
+        {
+          "client_id": "507823611338-db03f3oh3orjb6jkd0s03cijb55jpqr5.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC8CQ77QzO-9mIHepcbysE6t23hFT2aB1k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "507823611338-db03f3oh3orjb6jkd0s03cijb55jpqr5.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "507823611338-a2lk9e0sbi39mgkh9kt17pra4db6luok.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.edsushyShop"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
