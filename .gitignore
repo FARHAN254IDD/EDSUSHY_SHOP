@@ -12,6 +12,20 @@
 .swiftpm/
 migrate_working_dir/
 
+# Environment variables (IMPORTANT - Don't commit!)
+.env
+.env.local
+.env.*.local
+
+# Firebase (Don't commit sensitive keys)
+firebase-debug.log
+
+# Node modules
+node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
 # IntelliJ related
 *.iml
 *.ipr

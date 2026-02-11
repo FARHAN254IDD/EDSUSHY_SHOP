@@ -24,13 +24,14 @@ const MPESA_API_URL = MPESA_CONFIG.env === 'sandbox'
 
 // ==================== M-Pesa STK Push Payment ====================
 exports.initiateMpesaPayment = functions.https.onRequest(async (req, res) => {
-  // Enable CORS
+  // Enable CORS for all origins
   res.set('Access-Control-Allow-Origin', '*');
-  res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, DELETE, PUT');
   res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
+  // Handle preflight requests
   if (req.method === 'OPTIONS') {
-    res.status(200).send('OK');
+    res.status(200).send('CORS OK');
     return;
   }
 
@@ -102,7 +103,6 @@ exports.initiateMpesaPayment = functions.https.onRequest(async (req, res) => {
         paymentMethod: 'mpesa',
         status: 'pending',
         checkoutRequestId: response.data.CheckoutRequestID,
-        requestId: response.data.RequestId,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
         updatedAt: admin.firestore.FieldValue.serverTimestamp()
       });
@@ -110,8 +110,7 @@ exports.initiateMpesaPayment = functions.https.onRequest(async (req, res) => {
       return res.status(200).json({
         success: true,
         message: 'STK Push sent successfully',
-        checkoutRequestId: response.data.CheckoutRequestID,
-        requestId: response.data.RequestId
+        checkoutRequestId: response.data.CheckoutRequestID
       });
     } else {
       return res.status(400).json({
@@ -133,11 +132,11 @@ exports.initiateMpesaPayment = functions.https.onRequest(async (req, res) => {
 exports.mpesaCallback = functions.https.onRequest(async (req, res) => {
   // Enable CORS
   res.set('Access-Control-Allow-Origin', '*');
-  res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, DELETE, PUT');
   res.set('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') {
-    res.status(200).send('OK');
+    res.status(200).send('CORS OK');
     return;
   }
 
@@ -240,11 +239,11 @@ exports.mpesaCallback = functions.https.onRequest(async (req, res) => {
 // ==================== Query STK Push Status ====================
 exports.queryStkPushStatus = functions.https.onRequest(async (req, res) => {
   res.set('Access-Control-Allow-Origin', '*');
-  res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, DELETE, PUT');
   res.set('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') {
-    res.status(200).send('OK');
+    res.status(200).send('CORS OK');
     return;
   }
 
@@ -298,6 +297,55 @@ exports.queryStkPushStatus = functions.https.onRequest(async (req, res) => {
   }
 });
 
+// ==================== Check Payment Status ====================
+exports.checkPaymentStatus = functions.https.onRequest(async (req, res) => {
+  res.set('Access-Control-Allow-Origin', '*');
+  res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, DELETE, PUT');
+  res.set('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    res.status(200).send('CORS OK');
+    return;
+  }
+
+  try {
+    const { checkoutRequestId } = req.query;
+
+    if (!checkoutRequestId) {
+      return res.status(400).json({
+        success: false,
+        message: 'checkoutRequestId is required'
+      });
+    }
+
+    // Query transaction by checkoutRequestId
+    const snapshot = await db.collection('transactions')
+      .where('checkoutRequestId', '==', checkoutRequestId)
+      .limit(1)
+      .get();
+
+    if (snapshot.empty) {
+      return res.status(404).json({
+        success: false,
+        message: 'Transaction not found'
+      });
+    }
+
+    const transaction = snapshot.docs[0].data();
+    return res.status(200).json({
+      success: true,
+      status: transaction.status,
+      transaction: transaction
+    });
+  } catch (error) {
+    console.error('Error checking payment status:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'An error occurred: ' + error.message
+    });
+  }
+});
+
 // ==================== Helper Functions ====================
 async function getMpesaAccessToken() {
   try {
@@ -334,11 +382,11 @@ function formatTimestamp(date) {
 // ==================== Payment Verification ====================
 exports.verifyPayment = functions.https.onRequest(async (req, res) => {
   res.set('Access-Control-Allow-Origin', '*');
-  res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, DELETE, PUT');
   res.set('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') {
-    res.status(200).send('OK');
+    res.status(200).send('CORS OK');
     return;
   }
 

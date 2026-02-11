@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../services/mpesa_service.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class PaymentProvider extends ChangeNotifier {
   bool _isProcessing = false;
@@ -8,7 +9,8 @@ class PaymentProvider extends ChangeNotifier {
   String? _checkoutRequestId;
   Map<String, dynamic>? _lastTransactionData;
 
-  late MpesaService _mpesaService;
+  // M-Pesa Backend URL (Deployed on Render)
+  static const String _firebaseBaseUrl = 'https://edsushy-shop.onrender.com';
 
   bool get isProcessing => _isProcessing;
   String? get errorMessage => _errorMessage;
@@ -17,18 +19,11 @@ class PaymentProvider extends ChangeNotifier {
   Map<String, dynamic>? get lastTransactionData => _lastTransactionData;
 
   PaymentProvider() {
-    // Initialize M-Pesa service with credentials
-    _mpesaService = MpesaService(
-      consumerKey: 'A3x09Kvm8A8xiGHha5yloAdL36U3GpZP8nySX4syRGiet4Eu',
-      consumerSecret: 'Reg1ULoAJfx88r64LiI3SGrAevNEKhqvYcdOGtCiGsyd1ECmpxrABE9lo1Ltk3uX',
-      shortcode: '174379',
-      passkey: 'bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919',
-      callbackUrl: 'https://1d1d8ae8dadd.ngrok-free.app/user/mpesa/callback',
-      isSandbox: true,
-    );
+    // Cloud Functions will handle M-Pesa API calls (solves CORS issue)
   }
 
-  /// Initiate M-Pesa STK Push
+  /// Initiate M-Pesa STK Push via Firebase Cloud Function
+  /// This avoids CORS issues by calling through your backend
   Future<bool> initiateMpesaPayment({
     required String phoneNumber,
     required double amount,
@@ -42,107 +37,92 @@ class PaymentProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final result = await _mpesaService.initiateStkPush(
-        phoneNumber: phoneNumber,
-        amount: amount,
-        accountReference: orderId,
-        transactionDescription: transactionDescription ?? 'Edsushy Shop Order',
-        orderId: orderId,
-      );
+      print('DEBUG: Calling Cloud Function to initiate M-Pesa payment');
+      print('DEBUG: Phone: $phoneNumber, Amount: $amount, OrderID: $orderId');
 
-      if (result['success'] == true) {
-        _checkoutRequestId = result['checkoutRequestId'];
-        _successMessage = 'STK Push sent successfully. Please enter your M-Pesa PIN.';
-        _lastTransactionData = result;
-        _isProcessing = false;
-        notifyListeners();
-        return true;
+      // Call Cloud Function endpoint
+      final response = await http.post(
+        Uri.parse('$_firebaseBaseUrl/initiateMpesaPayment'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'phoneNumber': phoneNumber,
+          'amount': amount,
+          'orderId': orderId,
+          'customerEmail': customerEmail,
+          'transactionDescription': transactionDescription ?? 'Edsushy Shop Order',
+        }),
+      ).timeout(const Duration(seconds: 30));
+
+      print('DEBUG: Cloud Function Response Code: ${response.statusCode}');
+      print('DEBUG: Cloud Function Response: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final result = jsonDecode(response.body);
+        
+        if (result['success'] == true) {
+          _checkoutRequestId = result['checkoutRequestId'];
+          _successMessage = 'STK Push sent successfully. Please enter your M-Pesa PIN.';
+          _lastTransactionData = result;
+          _isProcessing = false;
+          notifyListeners();
+          return true;
+        } else {
+          _errorMessage = result['message'] ?? 'Failed to initiate payment';
+          _isProcessing = false;
+          notifyListeners();
+          return false;
+        }
       } else {
-        _errorMessage = result['message'] ?? 'Failed to initiate payment';
+        _errorMessage = 'Server error: ${response.statusCode}';
         _isProcessing = false;
         notifyListeners();
         return false;
       }
     } catch (e) {
-      _errorMessage = 'Error initiating payment: $e';
+      print('ERROR initiating M-Pesa payment: $e');
+      _errorMessage = 'Error: $e';
       _isProcessing = false;
       notifyListeners();
       return false;
     }
   }
 
-  /// Query the status of an initiated STK Push
+  /// Check payment status
   Future<bool> checkPaymentStatus({required String checkoutRequestId}) async {
     _isProcessing = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      final result = await _mpesaService.queryStkStatus(
-        checkoutRequestId: checkoutRequestId,
-      );
+      final response = await http.get(
+        Uri.parse('$_firebaseBaseUrl/checkPaymentStatus?checkoutRequestId=$checkoutRequestId'),
+      ).timeout(const Duration(seconds: 30));
 
-      _lastTransactionData = result;
+      if (response.statusCode == 200) {
+        final result = jsonDecode(response.body);
+        _lastTransactionData = result;
 
-      final resultCode = result['ResultCode'];
-      if (resultCode == '0') {
-        _successMessage = 'Payment completed successfully!';
-        _isProcessing = false;
-        notifyListeners();
-        return true;
-      } else if (resultCode == '1' || resultCode == 1) {
-        _errorMessage = 'Payment cancelled by user';
-        _isProcessing = false;
-        notifyListeners();
-        return false;
+        if (result['success'] == true) {
+          _successMessage = 'Payment completed successfully!';
+          _isProcessing = false;
+          notifyListeners();
+          return true;
+        } else {
+          _errorMessage = result['message'] ?? 'Payment pending';
+          _isProcessing = false;
+          notifyListeners();
+          return false;
+        }
       } else {
-        _errorMessage = result['ResultDesc'] ?? 'Payment status unknown';
+        _errorMessage = 'Failed to check payment status';
         _isProcessing = false;
         notifyListeners();
         return false;
       }
     } catch (e) {
       _errorMessage = 'Error checking payment status: $e';
-      _isProcessing = false;
-      notifyListeners();
-      return false;
-    }
-  }
-
-  /// Process M-Pesa callback
-  void processCallback(Map<String, dynamic> callbackData) {
-    try {
-      final parsedData = MpesaService.parseCallback(callbackData);
-      _lastTransactionData = parsedData;
-
-      if (parsedData['resultCode'] == 0) {
-        _successMessage = 'Payment successful! Receipt: ${parsedData['mpesaReceiptNumber']}';
-      } else {
-        _errorMessage = parsedData['resultDesc'] ?? 'Payment failed';
-      }
-      notifyListeners();
-    } catch (e) {
-      _errorMessage = 'Error processing callback: $e';
-      notifyListeners();
-    }
-  }
-
-  /// Verify payment with backend
-  Future<bool> verifyPaymentWithBackend({
-    required String orderId,
-    required String transactionId,
-  }) async {
-    try {
-      _isProcessing = true;
-      notifyListeners();
-
-      // This would typically call a Cloud Function to verify with your backend
-      // For now, we'll assume it's verified through the callback
-      _isProcessing = false;
-      notifyListeners();
-      return true;
-    } catch (e) {
-      _errorMessage = 'Error verifying payment: $e';
       _isProcessing = false;
       notifyListeners();
       return false;

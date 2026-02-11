@@ -36,6 +36,10 @@ class MpesaService {
 
     try {
       final String credentials = base64.encode(utf8.encode('$consumerKey:$consumerSecret'));
+      print('DEBUG: Attempting to get access token from: $_baseUrl/oauth/v1/generate');
+      print('DEBUG: Consumer Key: $consumerKey');
+      print('DEBUG: Consumer Secret: ${consumerSecret.substring(0, 5)}...${consumerSecret.substring(consumerSecret.length - 5)}');
+      
       final response = await http.get(
         Uri.parse('$_baseUrl/oauth/v1/generate?grant_type=client_credentials'),
         headers: {
@@ -44,18 +48,23 @@ class MpesaService {
         },
       ).timeout(const Duration(seconds: 30));
 
+      print('DEBUG: M-Pesa API Response Code: ${response.statusCode}');
+      print('DEBUG: M-Pesa API Response: ${response.body}');
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         _accessToken = data['access_token'];
         // Token typically expires in 3600 seconds, cache for 3500 seconds
         _tokenExpiry = DateTime.now().add(const Duration(seconds: 3500));
+        print('DEBUG: Access token received successfully');
         return _accessToken;
       } else {
-        print('Error getting access token: ${response.body}');
+        print('ERROR: Failed to get access token. Status: ${response.statusCode}');
+        print('ERROR: Response: ${response.body}');
         return null;
       }
     } catch (e) {
-      print('Exception getting access token: $e');
+      print('EXCEPTION getting access token: $e');
       return null;
     }
   }

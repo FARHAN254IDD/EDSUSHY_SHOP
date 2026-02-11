@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: edsushy-mpesa-backend
+    runtime: node
+    plan: free
+    buildCommand: cd functions && npm install
+    startCommand: cd functions && node server.js
+    envVars:
+      - key: PORT
+        value: 5000
+      - key: NODE_ENV
+        value: production
+    autoDeploy: true
