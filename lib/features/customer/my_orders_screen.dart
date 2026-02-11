@@ -5,7 +5,9 @@ import '../../providers/auth_provider.dart';
 import 'order_details_screen.dart';
 
 class MyOrdersScreen extends StatefulWidget {
-  const MyOrdersScreen({super.key});
+  final VoidCallback? onStartShopping;
+  
+  const MyOrdersScreen({super.key, this.onStartShopping});
 
   @override
   State<MyOrdersScreen> createState() => _MyOrdersScreenState();
@@ -54,11 +56,15 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                           ),
                           const SizedBox(height: 24),
                           ElevatedButton(
-                            onPressed: () {
-                              // Navigate to products
-                              Navigator.of(context).popUntil((route) => route.isFirst);
-                            },
-                            child: const Text('Start Shopping'),
+                            onPressed: widget.onStartShopping ?? () {},
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.deepPurple,
+                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                            ),
+                            child: const Text(
+                              'Start Shopping',
+                              style: TextStyle(color: Colors.white),
+                            ),
                           ),
                         ],
                       ),

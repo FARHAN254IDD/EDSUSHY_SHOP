@@ -16,7 +16,7 @@ class AuthService {
 
     await _firestore.collection('users').doc(cred.user!.uid).set({
       'email': email,
-      'role': 'user',
+      'role': 'customer',
       'createdAt': FieldValue.serverTimestamp(),
     });
   }
@@ -45,7 +45,7 @@ class AuthService {
             if (!doc.exists) {
               await _firestore.collection('users').doc(user.uid).set({
                 'email': user.email,
-                'role': 'user',
+                'role': 'customer',
                 'createdAt': FieldValue.serverTimestamp(),
               });
             }
@@ -88,7 +88,7 @@ class AuthService {
       if (!doc.exists) {
         await _firestore.collection('users').doc(userCred.user!.uid).set({
           'email': userCred.user!.email,
-          'role': 'user',
+          'role': 'customer',
           'createdAt': FieldValue.serverTimestamp(),
         });
       }

@@ -8,7 +8,9 @@ import '../../widgets/product_image.dart';
 import 'product_detail_screen.dart' as prod_detail;
 
 class WishlistScreen extends StatefulWidget {
-  const WishlistScreen({super.key});
+  final VoidCallback? onBrowseProducts;
+  
+  const WishlistScreen({super.key, this.onBrowseProducts});
 
   @override
   State<WishlistScreen> createState() => _WishlistScreenState();
@@ -61,11 +63,15 @@ class _WishlistScreenState extends State<WishlistScreen> {
                               ),
                               const SizedBox(height: 24),
                               ElevatedButton(
-                                onPressed: () {
-                                  // Navigate to products
-                                  // This would need to be handled at the parent level
-                                },
-                                child: const Text('Browse Products'),
+                                onPressed: widget.onBrowseProducts ?? () {},
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.deepPurple,
+                                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                ),
+                                child: const Text(
+                                  'Browse Products',
+                                  style: TextStyle(color: Colors.white),
+                                ),
                               ),
                             ],
                           ),

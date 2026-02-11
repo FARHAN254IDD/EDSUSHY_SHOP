@@ -7,7 +7,7 @@ import '../../providers/cart_provider.dart';
 import 'product_list_screen.dart';
 import 'my_orders_screen.dart';
 import 'wishlist_screen.dart';
-import '../../features/settings/profile_screen.dart';
+import 'profile_screen.dart';
 import 'cart_screen.dart';
 
 class CustomerDashboardScreen extends StatefulWidget {
@@ -30,8 +30,16 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> {
     super.initState();
     _screens = [
       const ProductListScreen(),
-      const MyOrdersScreen(),
-      const WishlistScreen(),
+      MyOrdersScreen(onStartShopping: () {
+        setState(() {
+          _selectedIndex = 0; // Navigate to Home tab
+        });
+      }),
+      WishlistScreen(onBrowseProducts: () {
+        setState(() {
+          _selectedIndex = 0; // Navigate to Home tab
+        });
+      }),
       const ProfileScreen(),
     ];
 

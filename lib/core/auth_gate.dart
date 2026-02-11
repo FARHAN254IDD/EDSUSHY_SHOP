@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import '../features/auth/login_screen.dart';
-import '../features/home/home_screen.dart';
+import '../features/customer/customer_dashboard_screen.dart';
 import '../features/admin/admin_home_screen.dart';
 import '../providers/user_provider.dart';
 
@@ -92,7 +92,7 @@ class AuthGate extends StatelessWidget {
             if (!doc.exists || userData == null) {
               FirebaseFirestore.instance.collection('users').doc(user.uid).set({
                 'email': user.email,
-                'role': 'user',
+                'role': 'customer',
                 'createdAt': FieldValue.serverTimestamp(),
               }, SetOptions(merge: true));
 
@@ -100,7 +100,7 @@ class AuthGate extends StatelessWidget {
                 context.read<UserProvider>().fetchUser(user.uid);
               });
 
-              return const HomeScreen();
+              return const CustomerDashboardScreen();
             }
 
             final role = userData['role'] ?? 'customer';
@@ -116,7 +116,7 @@ class AuthGate extends StatelessWidget {
             if (role == 'admin') {
               return const AdminHomeScreen();
             } else {
-              return const HomeScreen();
+              return const CustomerDashboardScreen();
             }
           },
         );
