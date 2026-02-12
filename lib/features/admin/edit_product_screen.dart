@@ -1,16 +1,5 @@
 import 'package:flutter/material.dart';
-import 'dart:typed_data';
-import 'dart:convert';
-import 'package:flutter/services.dart' show rootBundle;
-import 'dart:async';
-import 'package:flutter/foundation.dart' show kIsWeb;
-import '../../utils/file_picker_web_stub.dart'
-  if (dart.library.html) '../../utils/file_picker_web.dart';
-import '../../utils/file_reader_stub.dart'
-    if (dart.library.io) '../../utils/file_reader_io.dart';
 import 'package:provider/provider.dart';
-import 'package:file_picker/file_picker.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import '../../providers/product_provider.dart';
 import '../../models/product_model.dart';
 
@@ -30,9 +19,6 @@ class _EditProductScreenState extends State<EditProductScreen> {
   late TextEditingController _originalPriceController;
   late TextEditingController _stockController;
   late TextEditingController _imageUrlController;
-  Uint8List? _pickedImageBytes;
-  String? _pickedImageName;
-  String? _selectedAssetPath;
   late TextEditingController _categoryController;
   final _formKey = GlobalKey<FormState>();
   bool _isSaving = false;
@@ -64,143 +50,6 @@ class _EditProductScreenState extends State<EditProductScreen> {
     _imageUrlController.dispose();
     _categoryController.dispose();
     super.dispose();
-  }
-
-  Future<void> _pickImage() async {
-    try {
-      if (kIsWeb) {
-        final result = await pickImageWeb();
-        if (result != null) {
-          setState(() {
-            _pickedImageBytes = result['bytes'] as Uint8List?;
-            _pickedImageName = result['name'] as String?;
-            _selectedAssetPath = null;
-          });
-        }
-      } else {
-        final result = await FilePicker.platform
-            .pickFiles(type: FileType.image, withData: true);
-        if (result != null && result.files.isNotEmpty) {
-          final file = result.files.first;
-          Uint8List? bytes = file.bytes;
-          if (bytes == null && file.path != null) {
-            try {
-              bytes = await readFileBytesIo(file.path!);
-            } catch (e) {
-              debugPrint('readFileBytesIo error: $e');
-            }
-          }
-
-          if (bytes == null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Failed to read picked file bytes.')),
-            );
-          } else {
-            debugPrint('Picked file: path=${file.path}, name=${file.name}, bytes=${bytes.length}');
-            setState(() {
-              _pickedImageBytes = bytes;
-              _pickedImageName = file.name;
-              _selectedAssetPath = null;
-            });
-          }
-        }
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Image pick failed: $e')),
-      );
-    }
-  }
-
-  Future<void> _chooseFromAssets() async {
-    try {
-      final manifestContent = await rootBundle.loadString('AssetManifest.json');
-      final Map<String, dynamic> manifestMap = json.decode(manifestContent);
-      final assetKeys = manifestMap.keys
-          .where((k) => k.startsWith('assets/images/'))
-          .toList();
-
-      String? picked;
-      await showDialog<void>(
-        context: context,
-        builder: (context) {
-          return AlertDialog(
-            title: const Text('Choose an asset image'),
-            content: SizedBox(
-              width: double.maxFinite,
-              child: GridView.builder(
-                shrinkWrap: true,
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  crossAxisSpacing: 8,
-                  mainAxisSpacing: 8,
-                ),
-                itemCount: assetKeys.length,
-                itemBuilder: (context, index) {
-                  final path = assetKeys[index];
-                  return GestureDetector(
-                    onTap: () {
-                      picked = path;
-                      Navigator.of(context).pop();
-                    },
-                    child: Image.asset(path, fit: BoxFit.cover),
-                  );
-                },
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Cancel'),
-              )
-            ],
-          );
-        },
-      );
-
-      if (picked != null) {
-        setState(() {
-          _selectedAssetPath = picked;
-          _pickedImageBytes = null;
-          _pickedImageName = null;
-        });
-      }
-    } catch (e) {
-      // If AssetManifest.json couldn't be loaded (common when assets
-      // aren't bundled in a debug/hot-reload session), offer the user
-      // a fallback: pick a local file or show instructions to rebuild.
-      await showDialog<void>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Asset pick failed'),
-          content: Text(
-              'Could not load bundled asset list: $e\n\nIf you recently added assets, run a full rebuild (flutter clean && flutter pub get && flutter run).\n\nOr pick an image file from your device instead.'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text('OK'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                _pickImage();
-              },
-              child: const Text('Pick local file'),
-            ),
-          ],
-        ),
-      );
-    }
-  }
-
-  String _mimeFromFilename(String filename) {
-    final lower = filename.toLowerCase();
-    if (lower.endsWith('.png')) return 'image/png';
-    if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
-    if (lower.endsWith('.gif')) return 'image/gif';
-    return 'application/octet-stream';
   }
 
   @override
@@ -338,7 +187,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
               TextFormField(
                 controller: _imageUrlController,
                 decoration: InputDecoration(
-                  labelText: 'Image URL (alternative)',
+                  labelText: 'Image URL',
                   hintText: 'e.g. https://example.com/image.jpg',
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
@@ -358,59 +207,22 @@ class _EditProductScreenState extends State<EditProductScreen> {
                 },
               ),
               const SizedBox(height: 12),
-              // Image preview + select button (selection-only)
-              const SizedBox(height: 8),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  ElevatedButton.icon(
-                    onPressed: _pickImage,
-                    icon: const Icon(Icons.image_outlined),
-                    label: const Text('Select Image'),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton.icon(
-                    onPressed: _chooseFromAssets,
-                    icon: const Icon(Icons.folder),
-                    label: const Text('Choose From Assets'),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      _pickedImageName ??
-                          _selectedAssetPath ??
-                          (widget.product?.imageUrl.isNotEmpty == true
-                              ? 'Using existing image'
-                              : 'No image selected'),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
               SizedBox(
                 height: 140,
                 child: Center(
-                  child: _pickedImageBytes != null
-                    ? Image.memory(_pickedImageBytes!, fit: BoxFit.contain)
-                    : (_selectedAssetPath != null
-                      ? Image.asset(_selectedAssetPath!, fit: BoxFit.contain)
-                      : (_imageUrlController.text.isNotEmpty
-                        ? Image.network(_imageUrlController.text,
+                  child: _imageUrlController.text.isNotEmpty
+                    ? Image.network(_imageUrlController.text,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) =>
+                        const Icon(Icons.broken_image))
+                    : (widget.product?.imageUrl.isNotEmpty == true
+                      ? (widget.product!.imageUrl.startsWith('http')
+                        ? Image.network(widget.product!.imageUrl,
                           fit: BoxFit.contain,
                           errorBuilder: (context, error, stackTrace) =>
                             const Icon(Icons.broken_image))
-                        : (widget.product?.imageUrl.isNotEmpty == true
-                          ? (widget.product!.imageUrl.startsWith('http')
-                            ? Image.network(widget.product!.imageUrl,
-                              fit: BoxFit.contain,
-                              errorBuilder: (context, error, stackTrace) =>
-                                const Icon(Icons.broken_image))
-                            : (widget.product!.imageUrl.startsWith('asset:')
-                              ? Image.asset(widget.product!.imageUrl.substring(6), fit: BoxFit.contain)
-                              : Image.asset('assets/images/${widget.product!.id}.png', fit: BoxFit.contain)))
-                          : const Icon(Icons.image, size: 64)))),
+                        : const Icon(Icons.image, size: 64))
+                      : const Icon(Icons.image, size: 64)),
                 ),
               ),
               const SizedBox(height: 24),
@@ -422,94 +234,29 @@ class _EditProductScreenState extends State<EditProductScreen> {
                       ? null
                       : () async {
                           if (!_formKey.currentState!.validate()) return;
+                          
+                          // Validate image URL
+                          if (_imageUrlController.text.trim().isEmpty &&
+                              (widget.product?.imageUrl.isEmpty ?? true)) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Please provide an image URL'),
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
+                            return;
+                          }
+
                           setState(() {
                             _isSaving = true;
                           });
                           try {
                             debugPrint('Saving product...');
-                            // Image URL priority: 1) selected asset, 2) manual URL, 3) picked file (native only), 4) existing
-                            String imageUrl = '';
-                            final productId = widget.product?.id ??
-                                DateTime.now().millisecondsSinceEpoch.toString();
-
-                            // Priority 1: Selected asset path
-                            if (_selectedAssetPath != null) {
-                              imageUrl = 'asset:$_selectedAssetPath';
-                              debugPrint('Using selected asset: $imageUrl');
-                            }
-                            // Priority 2: Manual URL entry
-                            else if (_imageUrlController.text.trim().isNotEmpty) {
-                              imageUrl = _imageUrlController.text.trim();
-                              debugPrint('Using manual URL: $imageUrl');
-                            }
-                            // Priority 3: Picked image bytes (upload only on native, skip on web)
-                            else if (_pickedImageBytes != null && !kIsWeb) {
-                              try {
-                                final ref = FirebaseStorage.instance
-                                    .ref()
-                                    .child('products/$productId/${_pickedImageName ?? 'image.png'}');
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Uploading image...')),
-                                );
-                                // Provide contentType metadata which helps web uploads
-                                final metadata = SettableMetadata(
-                                  contentType: _pickedImageName != null && _pickedImageName!.contains('.')
-                                      ? _mimeFromFilename(_pickedImageName!)
-                                      : 'image/png',
-                                );
-                                await ref
-                                    .putData(_pickedImageBytes!, metadata)
-                                    .timeout(const Duration(seconds: 120));
-                                imageUrl = await ref
-                                    .getDownloadURL()
-                                    .timeout(const Duration(seconds: 30));
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Image uploaded')),
-                                );
-                              } on TimeoutException catch (e) {
-                                debugPrint('Image upload timed out: $e');
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Image upload timed out — check network/CORS/Firebase rules')),
-                                );
-                              } catch (e, st) {
-                                debugPrint('Image upload failed: $e\n$st');
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Image upload failed: $e')),
-                                );
-                              }
-                            }
-                            // Priority 4: Existing image URL (fallback)
-                            else if (widget.product?.imageUrl.isNotEmpty == true) {
+                            
+                            // Use URL from text field, or keep existing if empty
+                            String imageUrl = _imageUrlController.text.trim();
+                            if (imageUrl.isEmpty && widget.product?.imageUrl.isNotEmpty == true) {
                               imageUrl = widget.product!.imageUrl;
-                              debugPrint('Keeping existing image: $imageUrl');
-                            }
-
-                            // On web, reject picked files with helpful message
-                            if (kIsWeb && _pickedImageBytes != null && imageUrl.isEmpty) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Web: Use "Choose From Assets" or paste an Image URL'),
-                                  duration: Duration(seconds: 3),
-                                ),
-                              );
-                              setState(() {
-                                _isSaving = false;
-                              });
-                              return;
-                            }
-
-                            // Validation: at least one image source must be selected
-                            if (imageUrl.isEmpty) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Please select an image or provide an image URL'),
-                                  duration: Duration(seconds: 2),
-                                ),
-                              );
-                              setState(() {
-                                _isSaving = false;
-                              });
-                              return;
                             }
 
                             final product = Product(

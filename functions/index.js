@@ -15,7 +15,7 @@ const MPESA_CONFIG = {
   shortcode: process.env.MPESA_SHORTCODE || '174379',
   passkey: process.env.MPESA_PASSKEY || 'bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919',
   env: process.env.MPESA_ENV || 'sandbox',
-  callbackUrl: process.env.MPESA_CALLBACK_URL || 'https://1d1d8ae8dadd.ngrok-free.app/user/mpesa/callback'
+  callbackUrl: process.env.MPESA_CALLBACK_URL || 'https://b76c-129-222-147-252.ngrok-free.app/user/mpesa/callback'
 };
 
 const MPESA_API_URL = MPESA_CONFIG.env === 'sandbox' 

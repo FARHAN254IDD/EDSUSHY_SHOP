@@ -1,29 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import '../models/product_model.dart';
 import '../models/cart_item_model.dart';
-
-/// Convert external URL to CORS-friendly proxy URL for web
-String _getCorsProxyUrl(String url) {
-  if (kIsWeb && url.startsWith('http')) {
-    // Use CORS proxy for external URLs
-    // This allows cross-origin image loading on web
-    return 'https://cors-anywhere.herokuapp.com/$url';
-  }
-  return url;
-}
 
 Widget productImageWidget(Product product, BoxFit fit, {bool centerFallback = false}) {
   final url = product.imageUrl;
   print('[productImageWidget] Product ${product.id}: imageUrl="$url" (length=${url.length})');
   
   Widget buildNetwork(String u) {
-    final proxyUrl = _getCorsProxyUrl(u);
-    if (proxyUrl != u) {
-      print('[productImageWidget] Using CORS proxy: $proxyUrl');
-    }
+    print('[productImageWidget] Loading as network image: $u');
     return Image.network(
-      proxyUrl,
+      u,
       fit: fit,
       errorBuilder: (context, error, stackTrace) {
         debugPrint('Failed to load network image: $u - Error: $error');
@@ -97,13 +83,11 @@ Widget productImageWidget(Product product, BoxFit fit, {bool centerFallback = fa
   }
   return widget;
 }
-
 Widget cartItemImageWidget(CartItem item, {BoxFit fit = BoxFit.cover}) {
   final url = item.imageUrl;
   if (url.isNotEmpty) {
     if (url.startsWith('http')) {
-      final proxyUrl = _getCorsProxyUrl(url);
-      return Image.network(proxyUrl, fit: fit, errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image));
+      return Image.network(url, fit: fit, errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image));
     }
     if (url.startsWith('asset:')) {
       return Image.asset(url.substring(6), fit: fit, errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image));
