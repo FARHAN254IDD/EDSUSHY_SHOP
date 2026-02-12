@@ -35,9 +35,16 @@ class AppUser {
       createdAt = DateTime.now();
     }
     
+    // Handle email - check for null, empty, or string "null"
+    final emailData = data['email'];
+    String email = '';
+    if (emailData != null && emailData.toString().isNotEmpty && emailData.toString() != 'null') {
+      email = emailData.toString();
+    }
+    
     return AppUser(
       uid: uid,
-      email: data['email'] ?? '',
+      email: email,
       role: data['role'] ?? 'customer',
       isBlocked: data['isBlocked'] ?? false,
       createdAt: createdAt,

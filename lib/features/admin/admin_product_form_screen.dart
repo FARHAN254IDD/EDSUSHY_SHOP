@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/admin_product_provider.dart';
+import '../../widgets/image_upload_widget.dart';
 
 class AdminProductFormScreen extends StatefulWidget {
   final Map<String, dynamic>? product;
@@ -310,10 +311,59 @@ class _AdminProductFormScreenState extends State<AdminProductFormScreen> {
 
             // Images Section
             Text(
-              'Product Images (URLs)',
+              'Product Images',
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 12),
+
+            // Image Upload Button
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Upload Image to Supabase',
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                    const SizedBox(height: 8),
+                    ImageUploadWidget(
+                      productId: widget.product?['id'] ?? DateTime.now().millisecondsSinceEpoch.toString(),
+                      onImageUploaded: (imageUrl) {
+                        setState(() {
+                          imageUrls.add(imageUrl);
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // OR divider
+            Row(
+              children: [
+                Expanded(child: Divider(color: Colors.grey[400])),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(
+                    'OR',
+                    style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.bold),
+                  ),
+                ),
+                Expanded(child: Divider(color: Colors.grey[400])),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Manual Image URL Input
+            Text(
+              'Enter Image URL Manually',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            const SizedBox(height: 8),
 
             // Image URL Input
             Row(

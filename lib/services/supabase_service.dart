@@ -15,6 +15,9 @@ class SupabaseService {
 
   // Storage bucket name for products
   static const String productBucket = 'Products';
+  
+  // Storage bucket name for profile photos
+  static const String profilePhotosBucket = 'profile-photos';
 
   // Initialize Supabase
   static Future<void> initialize() async {

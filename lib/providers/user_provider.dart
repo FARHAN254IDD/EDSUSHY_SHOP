@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:io';
 import '../models/user_model.dart';
+import '../services/supabase_service.dart';
 
 class UserProvider extends ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseStorage _storage = FirebaseStorage.instance;
   AppUser? _currentUser;
   List<AppUser> _allUsers = [];
   List<AppUser> _blockedUsers = [];
@@ -99,14 +99,31 @@ class UserProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
+      print('🔍 Fetching all users from Firestore...');
       final snapshot = await _firestore.collection('users').get();
+      print('📊 Found ${snapshot.docs.length} user documents');
+      
       _allUsers = snapshot.docs
-          .map((doc) => AppUser.fromMap(doc.id, doc.data()))
+          .map((doc) {
+            final data = doc.data();
+            final email = data['email']?.toString() ?? 'No email';
+            final displayEmail = (email.isEmpty || email == 'null') ? 'No email' : email;
+            print('👤 User ${doc.id}: role="${data['role']}", email="$displayEmail"');
+            return AppUser.fromMap(doc.id, data);
+          })
           .toList();
+      
       _blockedUsers = _allUsers.where((user) => user.isBlocked).toList();
+      
+      print('✅ Loaded ${_allUsers.length} users total');
+      print('👥 Customers (role=customer): ${_allUsers.where((u) => u.role == 'customer').length}');
+      print('👥 Users (role=user): ${_allUsers.where((u) => u.role == 'user').length}');
+      print('👮 Admins: ${_allUsers.where((u) => u.role == 'admin').length}');
+      print('❓ Unknown roles: ${_allUsers.where((u) => u.role != 'customer' && u.role != 'admin').map((u) => '${u.email}:${u.role}').join(', ')}');
+      
       notifyListeners();
     } catch (e) {
-      print('Error fetching users: $e');
+      print('❌ Error fetching users: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -195,14 +212,28 @@ class UserProvider extends ChangeNotifier {
       _profileUpdateError = null;
       notifyListeners();
 
-      final fileName = 'profile_photos/$uid/${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final storageRef = _storage.ref().child(fileName);
+      final fileName = '$uid/${DateTime.now().millisecondsSinceEpoch}.jpg';
       
-      print('Uploading to Firebase Storage...');
-      await storageRef.putFile(photoFile);
+      print('Reading photo bytes...');
+      final bytes = await photoFile.readAsBytes();
+      print('Photo size: ${bytes.length} bytes');
       
-      print('Getting download URL...');
-      final photoUrl = await storageRef.getDownloadURL();
+      print('Uploading to Supabase Storage...');
+      await SupabaseService.client.storage
+          .from(SupabaseService.profilePhotosBucket)
+          .uploadBinary(
+            fileName,
+            bytes,
+            fileOptions: const FileOptions(
+              contentType: 'image/jpeg',
+              upsert: true,
+            ),
+          );
+      
+      print('Getting public URL...');
+      final photoUrl = SupabaseService.client.storage
+          .from(SupabaseService.profilePhotosBucket)
+          .getPublicUrl(fileName);
       print('✅ Photo uploaded successfully: $photoUrl');
 
       _isUpdatingProfile = false;
@@ -218,7 +249,7 @@ class UserProvider extends ChangeNotifier {
     }
   }
 
-  /// Upload profile photo to Firebase Storage (Web version)
+  /// Upload profile photo to Supabase Storage (Web version)
   Future<String?> uploadProfilePhotoWeb(XFile photoFile, String uid) async {
     try {
       print('📸 Starting web photo upload...');
@@ -226,18 +257,28 @@ class UserProvider extends ChangeNotifier {
       _profileUpdateError = null;
       notifyListeners();
 
-      final fileName = 'profile_photos/$uid/${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final storageRef = _storage.ref().child(fileName);
+      final fileName = '$uid/${DateTime.now().millisecondsSinceEpoch}.jpg';
       
       print('Reading photo bytes...');
       final bytes = await photoFile.readAsBytes();
       print('Photo size: ${bytes.length} bytes');
       
-      print('Uploading to Firebase Storage...');
-      await storageRef.putData(bytes);
+      print('Uploading to Supabase Storage...');
+      await SupabaseService.client.storage
+          .from(SupabaseService.profilePhotosBucket)
+          .uploadBinary(
+            fileName,
+            bytes,
+            fileOptions: const FileOptions(
+              contentType: 'image/jpeg',
+              upsert: true,
+            ),
+          );
       
-      print('Getting download URL...');
-      final photoUrl = await storageRef.getDownloadURL();
+      print('Getting public URL...');
+      final photoUrl = SupabaseService.client.storage
+          .from(SupabaseService.profilePhotosBucket)
+          .getPublicUrl(fileName);
       print('✅ Photo uploaded successfully: $photoUrl');
 
       _isUpdatingProfile = false;

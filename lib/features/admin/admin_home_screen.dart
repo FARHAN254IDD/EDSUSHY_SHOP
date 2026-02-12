@@ -552,14 +552,35 @@ class CustomersManagementScreen extends StatefulWidget {
 
 class _CustomersManagementScreenState extends State<CustomersManagementScreen> {
   @override
+  void initState() {
+    super.initState();
+    // Fetch users when this screen loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<UserProvider>().fetchAllUsers();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Consumer<UserProvider>(
       builder: (context, userProvider, child) {
-        final customers = userProvider.allUsers.where((u) => u.role == 'customer').toList();
-        return SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
+        // Show both 'customer' and 'user' role (for backwards compatibility)
+        final customers = userProvider.allUsers.where((u) => u.role == 'customer' || u.role == 'user').toList();
+        
+        print('===== CUSTOMERS DEBUG =====');
+        print('Total users: ${userProvider.allUsers.length}');
+        print('Total customers: ${customers.length}');
+        print('Is loading: ${userProvider.isLoading}');
+        print('==========================');
+        
+        return RefreshIndicator(
+          onRefresh: () async {
+            await context.read<UserProvider>().fetchAllUsers();
+          },
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Card(
@@ -602,7 +623,8 @@ class _CustomersManagementScreenState extends State<CustomersManagementScreen> {
               ],
             ),
           ),
-        );
+        ),
+      );
       },
     );
   }
@@ -615,6 +637,11 @@ class CustomerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Safe email handling
+    final email = customer.email ?? 'No email';
+    final displayEmail = email.isEmpty || email == 'null' ? 'No email' : email;
+    final initial = displayEmail.isNotEmpty ? displayEmail[0].toUpperCase() : '?';
+    
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
@@ -622,9 +649,9 @@ class CustomerCard extends StatelessWidget {
           width: 40,
           height: 40,
           decoration: BoxDecoration(color: Colors.blue[100], shape: BoxShape.circle),
-          child: Center(child: Text(customer.email[0].toUpperCase())),
+          child: Center(child: Text(initial)),
         ),
-        title: Text(customer.email),
+        title: Text(displayEmail),
         subtitle: Text(customer.isBlocked ? '🔒 Blocked' : '✓ Active'),
         trailing: PopupMenuButton(
           itemBuilder: (context) => [

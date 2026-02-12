@@ -1,5 +1,8 @@
 import 'dart:io';
+import 'dart:typed_data';
+import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'supabase_service.dart';
 
 class ImageStorageService {
@@ -13,7 +16,7 @@ class ImageStorageService {
 
   static const uuid = Uuid();
 
-  /// Upload an image file to Supabase storage
+  /// Upload an image file to Supabase storage (Mobile)
   /// Returns the public URL of the uploaded image
   Future<String> uploadProductImage({
     required File imageFile,
@@ -28,12 +31,105 @@ class ImageStorageService {
 
       final String path = 'product_images/$productId/$uniqueFileName';
 
-      // Upload file to Supabase Storage
+      // Read file as bytes
+      final bytes = await imageFile.readAsBytes();
+
+      // Upload bytes to Supabase Storage
       await SupabaseService.client.storage
           .from(SupabaseService.productBucket)
-          .upload(
+          .uploadBinary(
             path,
-            imageFile,
+            bytes,
+            fileOptions: const FileOptions(
+              contentType: 'image/jpeg',
+              upsert: true,
+            ),
+          );
+
+      // Get public URL
+      final publicUrl = SupabaseService.client.storage
+          .from(SupabaseService.productBucket)
+          .getPublicUrl(path);
+
+      print('✅ Image uploaded successfully: $publicUrl');
+      return publicUrl;
+    } catch (e) {
+      print('❌ Image upload failed: $e');
+      throw Exception('Failed to upload image: $e');
+    }
+  }
+
+  /// Upload an image from XFile (Web compatible)
+  /// Returns the public URL of the uploaded image
+  Future<String> uploadProductImageWeb({
+    required XFile imageFile,
+    required String productId,
+    String fileName = '',
+  }) async {
+    try {
+      // Generate unique filename if not provided
+      final String uniqueFileName = fileName.isEmpty
+          ? '${productId}_${uuid.v4()}.jpg'
+          : fileName;
+
+      final String path = 'product_images/$productId/$uniqueFileName';
+
+      // Read file as bytes
+      final bytes = await imageFile.readAsBytes();
+
+      print('Uploading ${bytes.length} bytes to Supabase Storage...');
+
+      // Upload bytes to Supabase Storage
+      await SupabaseService.client.storage
+          .from(SupabaseService.productBucket)
+          .uploadBinary(
+            path,
+            bytes,
+            fileOptions: const FileOptions(
+              contentType: 'image/jpeg',
+              upsert: true,
+            ),
+          );
+
+      // Get public URL
+      final publicUrl = SupabaseService.client.storage
+          .from(SupabaseService.productBucket)
+          .getPublicUrl(path);
+
+      print('✅ Image uploaded successfully: $publicUrl');
+      return publicUrl;
+    } catch (e) {
+      print('❌ Image upload failed: $e');
+      throw Exception('Failed to upload image: $e');
+    }
+  }
+
+  /// Upload image from bytes directly
+  Future<String> uploadProductImageBytes({
+    required Uint8List bytes,
+    required String productId,
+    String fileName = '',
+  }) async {
+    try {
+      // Generate unique filename if not provided
+      final String uniqueFileName = fileName.isEmpty
+          ? '${productId}_${uuid.v4()}.jpg'
+          : fileName;
+
+      final String path = 'product_images/$productId/$uniqueFileName';
+
+      print('Uploading ${bytes.length} bytes to Supabase Storage...');
+
+      // Upload bytes to Supabase Storage
+      await SupabaseService.client.storage
+          .from(SupabaseService.productBucket)
+          .uploadBinary(
+            path,
+            bytes,
+            fileOptions: const FileOptions(
+              contentType: 'image/jpeg',
+              upsert: true,
+            ),
           );
 
       // Get public URL

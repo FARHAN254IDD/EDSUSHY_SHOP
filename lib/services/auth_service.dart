@@ -16,7 +16,7 @@ class AuthService {
 
     await _firestore.collection('users').doc(cred.user!.uid).set({
       'email': email,
-      'role': 'customer',
+      'role': 'customer',  // Use 'customer' for new registrations
       'createdAt': FieldValue.serverTimestamp(),
     });
   }
