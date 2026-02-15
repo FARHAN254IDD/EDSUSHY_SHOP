@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../providers/product_provider.dart';
 import '../../models/product_model.dart';
 import '../../widgets/product_image.dart';
+import '../../widgets/responsive_center.dart';
 import 'product_detail_screen.dart' as prod_detail;
 import 'search_products_screen.dart';
 
@@ -14,12 +15,16 @@ class ProductListScreen extends StatefulWidget {
 }
 
 class _ProductListScreenState extends State<ProductListScreen> {
+  int _gridColumns(double width) {
+    if (width >= 1200) return 4;
+    if (width >= 900) return 3;
+    return 2;
+  }
+
   @override
   void initState() {
     super.initState();
-    Future.microtask(
-      () => context.read<ProductProvider>().fetchProducts(),
-    );
+    Future.microtask(() => context.read<ProductProvider>().fetchProducts());
   }
 
   @override
@@ -34,9 +39,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (_) => const SearchProductsScreen(),
-                ),
+                MaterialPageRoute(builder: (_) => const SearchProductsScreen()),
               );
             },
           ),
@@ -50,57 +53,63 @@ class _ProductListScreenState extends State<ProductListScreen> {
 
           final categories = productProvider.getCategories();
 
-          return SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Category filter
-                SizedBox(
-                  height: 50,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    itemCount: categories.length,
-                    itemBuilder: (context, index) {
-                      final category = categories[index];
-                      final isSelected =
-                          productProvider.selectedCategory == category;
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        child: FilterChip(
-                          label: Text(category),
-                          selected: isSelected,
-                          onSelected: (_) {
-                            productProvider.filterByCategory(category);
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              final columns = _gridColumns(constraints.maxWidth);
+              return ResponsiveCenter(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Category filter
+                      SizedBox(
+                        height: 50,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          itemCount: categories.length,
+                          itemBuilder: (context, index) {
+                            final category = categories[index];
+                            final isSelected =
+                                productProvider.selectedCategory == category;
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 4,
+                              ),
+                              child: FilterChip(
+                                label: Text(category),
+                                selected: isSelected,
+                                onSelected: (_) {
+                                  productProvider.filterByCategory(category);
+                                },
+                              ),
+                            );
                           },
                         ),
-                      );
-                    },
+                      ),
+                      const SizedBox(height: 16),
+                      // Products grid
+                      GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: columns,
+                          childAspectRatio: 0.78,
+                          crossAxisSpacing: 16,
+                          mainAxisSpacing: 16,
+                        ),
+                        itemCount: productProvider.filteredProducts.length,
+                        itemBuilder: (context, index) {
+                          final product =
+                              productProvider.filteredProducts[index];
+                          return ProductCard(product: product);
+                        },
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 16),
-                // Products grid
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      childAspectRatio: 0.75,
-                      crossAxisSpacing: 8,
-                      mainAxisSpacing: 8,
-                    ),
-                    itemCount: productProvider.filteredProducts.length,
-                    itemBuilder: (context, index) {
-                      final product = productProvider.filteredProducts[index];
-                      return ProductCard(product: product);
-                    },
-                  ),
-                ),
-              ],
-            ),
+              );
+            },
           );
         },
       ),
@@ -133,7 +142,7 @@ class ProductCard extends StatelessWidget {
             Container(
               height: 120,
               color: Colors.grey[200],
-              child: productImageWidget(product,  BoxFit.cover),
+              child: productImageWidget(product, BoxFit.cover),
             ),
             // Product info
             Expanded(

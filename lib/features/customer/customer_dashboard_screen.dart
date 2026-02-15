@@ -14,14 +14,20 @@ class CustomerDashboardScreen extends StatefulWidget {
   const CustomerDashboardScreen({super.key});
 
   @override
-  State<CustomerDashboardScreen> createState() => _CustomerDashboardScreenState();
+  State<CustomerDashboardScreen> createState() =>
+      _CustomerDashboardScreenState();
 }
 
 class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> {
   int _selectedIndex = 0;
 
   final List<String> _labels = ['Home', 'Orders', 'Wishlist', 'Profile'];
-  final List<IconData> _icons = [Icons.home, Icons.receipt_long, Icons.favorite, Icons.person];
+  final List<IconData> _icons = [
+    Icons.home,
+    Icons.receipt_long,
+    Icons.favorite,
+    Icons.person,
+  ];
 
   late List<Widget> _screens;
 
@@ -30,16 +36,20 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> {
     super.initState();
     _screens = [
       const ProductListScreen(),
-      MyOrdersScreen(onStartShopping: () {
-        setState(() {
-          _selectedIndex = 0; // Navigate to Home tab
-        });
-      }),
-      WishlistScreen(onBrowseProducts: () {
-        setState(() {
-          _selectedIndex = 0; // Navigate to Home tab
-        });
-      }),
+      MyOrdersScreen(
+        onStartShopping: () {
+          setState(() {
+            _selectedIndex = 0; // Navigate to Home tab
+          });
+        },
+      ),
+      WishlistScreen(
+        onBrowseProducts: () {
+          setState(() {
+            _selectedIndex = 0; // Navigate to Home tab
+          });
+        },
+      ),
       const ProfileScreen(),
     ];
 
@@ -54,66 +64,103 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Edsushy Shop'),
-        elevation: 0,
-        actions: [
-          Consumer<CartProvider>(
-            builder: (context, cartProvider, child) {
-              return Stack(
-                alignment: Alignment.topRight,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isWide = constraints.maxWidth >= 1000;
+        final body = isWide
+            ? Row(
                 children: [
-                  IconButton(
-                    icon: const Icon(Icons.shopping_cart),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const CartScreen()),
-                      );
+                  NavigationRail(
+                    selectedIndex: _selectedIndex,
+                    onDestinationSelected: (index) {
+                      setState(() {
+                        _selectedIndex = index;
+                      });
                     },
-                  ),
-                  if (cartProvider.cartItems.isNotEmpty)
-                    Container(
-                      padding: const EdgeInsets.all(2),
-                      decoration: const BoxDecoration(
-                        color: Colors.red,
-                        shape: BoxShape.circle,
-                      ),
-                      constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
-                      child: Text(
-                        '${cartProvider.cartItems.length}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
+                    labelType: NavigationRailLabelType.all,
+                    destinations: List.generate(
+                      _labels.length,
+                      (index) => NavigationRailDestination(
+                        icon: Icon(_icons[index]),
+                        label: Text(_labels[index]),
                       ),
                     ),
+                  ),
+                  const VerticalDivider(width: 1),
+                  Expanded(child: _screens[_selectedIndex]),
                 ],
-              );
-            },
+              )
+            : _screens[_selectedIndex];
+
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Edsushy Shop'),
+            elevation: 0,
+            actions: [
+              Consumer<CartProvider>(
+                builder: (context, cartProvider, child) {
+                  return Stack(
+                    alignment: Alignment.topRight,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.shopping_cart),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const CartScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                      if (cartProvider.cartItems.isNotEmpty)
+                        Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                          constraints: const BoxConstraints(
+                            minWidth: 18,
+                            minHeight: 18,
+                          ),
+                          child: Text(
+                            '${cartProvider.cartItems.length}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
+            ],
           ),
-        ],
-      ),
-      body: _screens[_selectedIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        type: BottomNavigationBarType.fixed,
-        items: List.generate(
-          _labels.length,
-          (index) => BottomNavigationBarItem(
-            icon: Icon(_icons[index]),
-            label: _labels[index],
-          ),
-        ),
-        onTap: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
-      ),
+          body: body,
+          bottomNavigationBar: isWide
+              ? null
+              : BottomNavigationBar(
+                  currentIndex: _selectedIndex,
+                  type: BottomNavigationBarType.fixed,
+                  items: List.generate(
+                    _labels.length,
+                    (index) => BottomNavigationBarItem(
+                      icon: Icon(_icons[index]),
+                      label: _labels[index],
+                    ),
+                  ),
+                  onTap: (index) {
+                    setState(() {
+                      _selectedIndex = index;
+                    });
+                  },
+                ),
+        );
+      },
     );
   }
 }

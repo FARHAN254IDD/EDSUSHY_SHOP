@@ -7,11 +7,13 @@ import '../../providers/cart_provider.dart';
 import '../../providers/review_provider.dart';
 import '../../providers/wishlist_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../widgets/responsive_center.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final Product product;
 
-  const ProductDetailScreen({Key? key, required this.product}) : super(key: key);
+  const ProductDetailScreen({Key? key, required this.product})
+    : super(key: key);
 
   @override
   State<ProductDetailScreen> createState() => _ProductDetailScreenState();
@@ -25,7 +27,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   void initState() {
     super.initState();
     quantity = 1;
-    _reviewsFuture = context.read<ReviewProvider>().fetchProductReviews(widget.product.id);
+    _reviewsFuture = context.read<ReviewProvider>().fetchProductReviews(
+      widget.product.id,
+    );
     Future.microtask(() {
       final userId = context.read<AuthProvider>().user?.uid;
       if (userId != null) {
@@ -39,6 +43,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     final cartProvider = Provider.of<CartProvider>(context);
     final authProvider = Provider.of<AuthProvider>(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final imageHeight = MediaQuery.of(context).size.width >= 1000
+        ? 420.0
+        : 300.0;
 
     return Scaffold(
       appBar: AppBar(
@@ -56,14 +63,19 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   final userId = authProvider.user?.uid;
                   if (userId == null) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Please log in to use wishlist')),
+                      const SnackBar(
+                        content: Text('Please log in to use wishlist'),
+                      ),
                     );
                     return;
                   }
 
                   try {
                     if (isInWishlist) {
-                      await wishlist.removeFromWishlist(userId, widget.product.id);
+                      await wishlist.removeFromWishlist(
+                        userId,
+                        widget.product.id,
+                      );
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Removed from wishlist')),
                       );
@@ -85,294 +97,316 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         ],
       ),
       body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Product Image
-            Container(
-              width: double.infinity,
-              height: 300,
-              color: isDark ? Colors.grey[800] : Colors.grey[200],
-              child: Image.network(
-                widget.product.imageUrl,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Center(
-                    child: Icon(Icons.image_not_supported,
-                        size: 80, color: Colors.grey),
-                  );
-                },
+        child: ResponsiveCenter(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Product Image
+              Container(
+                width: double.infinity,
+                height: imageHeight,
+                color: isDark ? Colors.grey[800] : Colors.grey[200],
+                child: Image.network(
+                  widget.product.imageUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Center(
+                      child: Icon(
+                        Icons.image_not_supported,
+                        size: 80,
+                        color: Colors.grey,
+                      ),
+                    );
+                  },
+                ),
               ),
-            ),
-            Padding(
-              padding: EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Product Name and Price
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          widget.product.name,
-                          style: Theme.of(context).textTheme.headlineSmall,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      SizedBox(width: 8),
-                      Container(
-                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.green,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          'In Stock',
-                          style: TextStyle(color: Colors.white, fontSize: 12),
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 8),
-                  
-                  // Price Section
-                  Row(
-                    children: [
-                      Text(
-                        '\$${widget.product.price.toStringAsFixed(2)}',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.green,
-                        ),
-                      ),
-                      SizedBox(width: 12),
-                      if (widget.product.originalPrice != null &&
-                          widget.product.originalPrice! > widget.product.price)
-                        Text(
-                          '\$${widget.product.originalPrice!.toStringAsFixed(2)}',
-                          style: TextStyle(
-                            fontSize: 16,
-                            decoration: TextDecoration.lineThrough,
-                            color: Colors.grey,
+              Padding(
+                padding: EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Product Name and Price
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            widget.product.name,
+                            style: Theme.of(context).textTheme.headlineSmall,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                      SizedBox(width: 12),
-                      if (widget.product.originalPrice != null &&
-                          widget.product.originalPrice! > widget.product.price)
+                        SizedBox(width: 8),
                         Container(
-                          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
-                            color: Colors.orange,
+                            color: Colors.green,
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
-                            '-${((1 - widget.product.price / widget.product.originalPrice!) * 100).toStringAsFixed(0)}%',
+                            'In Stock',
                             style: TextStyle(color: Colors.white, fontSize: 12),
                           ),
                         ),
-                    ],
-                  ),
-                  SizedBox(height: 16),
-                  
-                  // Rating
-                  Row(
-                    children: [
-                      Row(
-                        children: [
-                          for (int i = 0; i < 5; i++)
-                            Icon(
-                              i < widget.product.rating.toInt()
-                                  ? Icons.star
-                                  : Icons.star_border,
-                              color: Colors.amber,
-                              size: 20,
-                            ),
-                        ],
-                      ),
-                      SizedBox(width: 8),
-                      Text('${widget.product.rating.toStringAsFixed(1)} (${widget.product.reviewCount} reviews)'),
-                    ],
-                  ),
-                  SizedBox(height: 16),
-                  
-                  // Description
-                  Text(
-                    'Description',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  SizedBox(height: 8),
-                  Text(widget.product.description),
-                  SizedBox(height: 16),
-                  
-                  // Quantity Selector
-                  Row(
-                    children: [
-                      Text(
-                        'Quantity:',
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      SizedBox(width: 16),
-                      Container(
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey),
-                          borderRadius: BorderRadius.circular(4),
+                      ],
+                    ),
+                    SizedBox(height: 8),
+
+                    // Price Section
+                    Row(
+                      children: [
+                        Text(
+                          '\$${widget.product.price.toStringAsFixed(2)}',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green,
+                          ),
                         ),
-                        child: Row(
-                          children: [
-                            IconButton(
-                              icon: Icon(Icons.remove),
-                              onPressed: () {
-                                setState(() {
-                                  if (quantity > 1) quantity--;
-                                });
-                              },
+                        SizedBox(width: 12),
+                        if (widget.product.originalPrice != null &&
+                            widget.product.originalPrice! >
+                                widget.product.price)
+                          Text(
+                            '\$${widget.product.originalPrice!.toStringAsFixed(2)}',
+                            style: TextStyle(
+                              fontSize: 16,
+                              decoration: TextDecoration.lineThrough,
+                              color: Colors.grey,
                             ),
-                            Container(
-                              padding: EdgeInsets.symmetric(horizontal: 16),
-                              child: Text(
-                                quantity.toString(),
-                                style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                        SizedBox(width: 12),
+                        if (widget.product.originalPrice != null &&
+                            widget.product.originalPrice! >
+                                widget.product.price)
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.orange,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              '-${((1 - widget.product.price / widget.product.originalPrice!) * 100).toStringAsFixed(0)}%',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
                               ),
                             ),
-                            IconButton(
-                              icon: Icon(Icons.add),
-                              onPressed: () {
-                                setState(() {
-                                  if (quantity < widget.product.stock) quantity++;
-                                });
-                              },
-                            ),
+                          ),
+                      ],
+                    ),
+                    SizedBox(height: 16),
+
+                    // Rating
+                    Row(
+                      children: [
+                        Row(
+                          children: [
+                            for (int i = 0; i < 5; i++)
+                              Icon(
+                                i < widget.product.rating.toInt()
+                                    ? Icons.star
+                                    : Icons.star_border,
+                                color: Colors.amber,
+                                size: 20,
+                              ),
                           ],
                         ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 24),
-                  
-                  // Add to Cart Button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 48,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        final cartItem = CartItem(
-                          productId: widget.product.id,
-                          productName: widget.product.name,
-                          price: widget.product.price,
-                          quantity: quantity,
-                          imageUrl: widget.product.imageUrl,
-                        );
-                        cartProvider.addItem(cartItem);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content:
-                                Text('Added $quantity item(s) to cart'),
-                            duration: Duration(seconds: 2),
-                          ),
-                        );
-                      },
-                      child: Text('Add to Cart'),
-                    ),
-                  ),
-                  SizedBox(height: 24),
-                  
-                  // Reviews Section
-                  Divider(),
-                  SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Customer Reviews',
-                        style: Theme.of(context).textTheme.headlineSmall,
-                      ),
-                      if (authProvider.user != null)
-                        ElevatedButton(
-                          onPressed: () => _showReviewDialog(context),
-                          child: Text('Write Review'),
+                        SizedBox(width: 8),
+                        Text(
+                          '${widget.product.rating.toStringAsFixed(1)} (${widget.product.reviewCount} reviews)',
                         ),
-                    ],
-                  ),
-                  SizedBox(height: 16),
-                  
-                  // Reviews List
-                  FutureBuilder<List<Review>?>(
-                    future: _reviewsFuture,
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return Center(child: CircularProgressIndicator());
-                      }
-                      
-                      if (!snapshot.hasData || snapshot.data == null || snapshot.data!.isEmpty) {
-                        return Center(
-                          child: Text('No reviews yet'),
-                        );
-                      }
-                      
-                      return ListView.builder(
-                        shrinkWrap: true,
-                        physics: NeverScrollableScrollPhysics(),
-                        itemCount: snapshot.data!.length,
-                        itemBuilder: (context, index) {
-                          final review = snapshot.data![index];
-                          return Card(
-                            child: Padding(
-                              padding: EdgeInsets.all(12),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        review.userName,
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.bold),
-                                      ),
-                                      Row(
-                                        children: [
-                                          for (int i = 0; i < 5; i++)
-                                            Icon(
-                                              i < review.rating
-                                                  ? Icons.star
-                                                  : Icons.star_border,
-                                              color: Colors.amber,
-                                              size: 16,
-                                            ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                  SizedBox(height: 8),
-                                  Text(
-                                    review.title,
-                                    style: TextStyle(fontWeight: FontWeight.bold),
-                                  ),
-                                  SizedBox(height: 4),
-                                  Text(review.comment),
-                                  SizedBox(height: 8),
-                                  Text(
-                                    review.createdAt
-                                        .toString()
-                                        .split('.')[0],
-                                    style: TextStyle(
-                                        color: Colors.grey, fontSize: 12),
-                                  ),
-                                ],
+                      ],
+                    ),
+                    SizedBox(height: 16),
+
+                    // Description
+                    Text(
+                      'Description',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    SizedBox(height: 8),
+                    Text(widget.product.description),
+                    SizedBox(height: 16),
+
+                    // Quantity Selector
+                    Row(
+                      children: [
+                        Text(
+                          'Quantity:',
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                        SizedBox(width: 16),
+                        Container(
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Row(
+                            children: [
+                              IconButton(
+                                icon: Icon(Icons.remove),
+                                onPressed: () {
+                                  setState(() {
+                                    if (quantity > 1) quantity--;
+                                  });
+                                },
                               ),
+                              Container(
+                                padding: EdgeInsets.symmetric(horizontal: 16),
+                                child: Text(
+                                  quantity.toString(),
+                                  style: Theme.of(context).textTheme.titleLarge,
+                                ),
+                              ),
+                              IconButton(
+                                icon: Icon(Icons.add),
+                                onPressed: () {
+                                  setState(() {
+                                    if (quantity < widget.product.stock)
+                                      quantity++;
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 24),
+
+                    // Add to Cart Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          final cartItem = CartItem(
+                            productId: widget.product.id,
+                            productName: widget.product.name,
+                            price: widget.product.price,
+                            quantity: quantity,
+                            imageUrl: widget.product.imageUrl,
+                          );
+                          cartProvider.addItem(cartItem);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Added $quantity item(s) to cart'),
+                              duration: Duration(seconds: 2),
                             ),
                           );
                         },
-                      );
-                    },
-                  ),
-                ],
+                        child: Text('Add to Cart'),
+                      ),
+                    ),
+                    SizedBox(height: 24),
+
+                    // Reviews Section
+                    Divider(),
+                    SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Customer Reviews',
+                          style: Theme.of(context).textTheme.headlineSmall,
+                        ),
+                        if (authProvider.user != null)
+                          ElevatedButton(
+                            onPressed: () => _showReviewDialog(context),
+                            child: Text('Write Review'),
+                          ),
+                      ],
+                    ),
+                    SizedBox(height: 16),
+
+                    // Reviews List
+                    FutureBuilder<List<Review>?>(
+                      future: _reviewsFuture,
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return Center(child: CircularProgressIndicator());
+                        }
+
+                        if (!snapshot.hasData ||
+                            snapshot.data == null ||
+                            snapshot.data!.isEmpty) {
+                          return Center(child: Text('No reviews yet'));
+                        }
+
+                        return ListView.builder(
+                          shrinkWrap: true,
+                          physics: NeverScrollableScrollPhysics(),
+                          itemCount: snapshot.data!.length,
+                          itemBuilder: (context, index) {
+                            final review = snapshot.data![index];
+                            return Card(
+                              child: Padding(
+                                padding: EdgeInsets.all(12),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          review.userName,
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        Row(
+                                          children: [
+                                            for (int i = 0; i < 5; i++)
+                                              Icon(
+                                                i < review.rating
+                                                    ? Icons.star
+                                                    : Icons.star_border,
+                                                color: Colors.amber,
+                                                size: 16,
+                                              ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                    SizedBox(height: 8),
+                                    Text(
+                                      review.title,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    SizedBox(height: 4),
+                                    Text(review.comment),
+                                    SizedBox(height: 8),
+                                    Text(
+                                      review.createdAt.toString().split('.')[0],
+                                      style: TextStyle(
+                                        color: Colors.grey,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -451,12 +485,14 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               );
               if (!mounted) return;
               setState(() {
-                _reviewsFuture = reviewProvider.fetchProductReviews(widget.product.id);
+                _reviewsFuture = reviewProvider.fetchProductReviews(
+                  widget.product.id,
+                );
               });
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Review posted!')),
-              );
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(SnackBar(content: Text('Review posted!')));
             },
             child: Text('Submit'),
           ),

@@ -5,11 +5,12 @@ import '../../providers/product_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../models/product_model.dart';
 import '../../widgets/product_image.dart';
+import '../../widgets/responsive_center.dart';
 import 'product_detail_screen.dart' as prod_detail;
 
 class WishlistScreen extends StatefulWidget {
   final VoidCallback? onBrowseProducts;
-  
+
   const WishlistScreen({super.key, this.onBrowseProducts});
 
   @override
@@ -17,6 +18,12 @@ class WishlistScreen extends StatefulWidget {
 }
 
 class _WishlistScreenState extends State<WishlistScreen> {
+  int _gridColumns(double width) {
+    if (width >= 1200) return 4;
+    if (width >= 900) return 3;
+    return 2;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -38,64 +45,72 @@ class _WishlistScreenState extends State<WishlistScreen> {
                 .where((p) => wishlistProvider.wishlistItems.contains(p.id))
                 .toList();
 
-            return SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'My Wishlist',
-                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 16),
-                    if (wishlistProducts.isEmpty)
-                      Center(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 40),
-                          child: Column(
-                            children: [
-                              Icon(Icons.favorite_outline, size: 60, color: Colors.grey[400]),
-                              const SizedBox(height: 16),
-                              Text(
-                                'Your wishlist is empty',
-                                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-                              ),
-                              const SizedBox(height: 24),
-                              ElevatedButton(
-                                onPressed: widget.onBrowseProducts ?? () {},
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.deepPurple,
-                                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                                ),
-                                child: const Text(
-                                  'Browse Products',
-                                  style: TextStyle(color: Colors.white),
-                                ),
-                              ),
-                            ],
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                final columns = _gridColumns(constraints.maxWidth);
+                return SingleChildScrollView(
+                  child: ResponsiveCenter(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'My Wishlist',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                      )
-                    else
-                      GridView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          childAspectRatio: 0.7,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
-                        ),
-                        itemCount: wishlistProducts.length,
-                        itemBuilder: (context, index) {
-                          final product = wishlistProducts[index];
-                          return WishlistProductCard(product: product);
-                        },
-                      ),
-                  ],
-                ),
-              ),
+                        const SizedBox(height: 16),
+                        if (wishlistProducts.isEmpty)
+                          Center(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 40),
+                              child: Column(
+                                children: [
+                                  Icon(
+                                    Icons.favorite_outline,
+                                    size: 60,
+                                    color: Colors.grey[400],
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'Your wishlist is empty',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 24),
+                                  ElevatedButton(
+                                    onPressed: widget.onBrowseProducts ?? () {},
+                                    child: const Text('Browse Products'),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                        else
+                          GridView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            gridDelegate:
+                                SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: columns,
+                                  childAspectRatio: 0.74,
+                                  crossAxisSpacing: 16,
+                                  mainAxisSpacing: 16,
+                                ),
+                            itemCount: wishlistProducts.length,
+                            itemBuilder: (context, index) {
+                              final product = wishlistProducts[index];
+                              return WishlistProductCard(product: product);
+                            },
+                          ),
+                      ],
+                    ),
+                  ),
+                );
+              },
             );
           },
         );
@@ -115,7 +130,9 @@ class WishlistProductCard extends StatelessWidget {
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => prod_detail.ProductDetailScreen(product: product)),
+          MaterialPageRoute(
+            builder: (_) => prod_detail.ProductDetailScreen(product: product),
+          ),
         );
       },
       child: Card(
@@ -137,9 +154,14 @@ class WishlistProductCard extends StatelessWidget {
                       onTap: () {
                         final userId = context.read<AuthProvider>().user?.uid;
                         if (userId != null) {
-                          context.read<WishlistProvider>().removeFromWishlist(userId, product.id);
+                          context.read<WishlistProvider>().removeFromWishlist(
+                            userId,
+                            product.id,
+                          );
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Removed from wishlist')),
+                            const SnackBar(
+                              content: Text('Removed from wishlist'),
+                            ),
                           );
                         }
                       },
@@ -149,7 +171,11 @@ class WishlistProductCard extends StatelessWidget {
                           shape: BoxShape.circle,
                         ),
                         padding: const EdgeInsets.all(6),
-                        child: const Icon(Icons.favorite, color: Colors.white, size: 16),
+                        child: const Icon(
+                          Icons.favorite,
+                          color: Colors.white,
+                          size: 16,
+                        ),
                       ),
                     ),
                   ),
@@ -158,7 +184,10 @@ class WishlistProductCard extends StatelessWidget {
                       top: 8,
                       left: 8,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.red,
                           borderRadius: BorderRadius.circular(4),
@@ -185,7 +214,10 @@ class WishlistProductCard extends StatelessWidget {
                     product.name,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(

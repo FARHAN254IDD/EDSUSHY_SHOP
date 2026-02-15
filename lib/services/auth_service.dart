@@ -16,7 +16,7 @@ class AuthService {
 
     await _firestore.collection('users').doc(cred.user!.uid).set({
       'email': email,
-      'role': 'customer',  // Use 'customer' for new registrations
+      'role': 'customer', // Use 'customer' for new registrations
       'createdAt': FieldValue.serverTimestamp(),
     });
   }
@@ -41,7 +41,10 @@ class AuthService {
           final user = userCred.user;
 
           if (user != null) {
-            final doc = await _firestore.collection('users').doc(user.uid).get();
+            final doc = await _firestore
+                .collection('users')
+                .doc(user.uid)
+                .get();
             if (!doc.exists) {
               await _firestore.collection('users').doc(user.uid).set({
                 'email': user.email,
@@ -54,7 +57,8 @@ class AuthService {
           return user;
         } on FirebaseAuthException catch (e) {
           // If popup blocked/closed, fall back to redirect flow (works around popup blockers)
-          if (e.code.contains('popup') || (e.message?.toLowerCase().contains('popup') ?? false)) {
+          if (e.code.contains('popup') ||
+              (e.message?.toLowerCase().contains('popup') ?? false)) {
             await _auth.signInWithRedirect(provider);
             // Redirect will navigate away and complete the flow on return; return null for now
             return null;
@@ -63,18 +67,13 @@ class AuthService {
         }
       }
 
-      // MOBILE/OTHER: use google_sign_in plugin
-      final googleUser = await GoogleSignIn().signIn();
-      if (googleUser == null) {
-        // User closed the sign-in popup or cancelled the flow
-        throw FirebaseAuthException(
-            code: 'popup-closed',
-            message: 'Google sign-in was cancelled or the popup closed.');
-      }
+      // MOBILE/OTHER: use google_sign_in plugin (v7+ API)
+      final googleSignIn = GoogleSignIn.instance;
+      await googleSignIn.initialize();
+      final googleUser = await googleSignIn.authenticate();
 
-      final googleAuth = await googleUser.authentication;
+      final googleAuth = googleUser.authentication;
       final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
