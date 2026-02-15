@@ -5,6 +5,7 @@ import '../../providers/theme_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../widgets/responsive_center.dart';
 import 'profile_edit_screen.dart';
+import 'change_password_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -415,6 +416,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                           title: const Text('Account Type'),
                           subtitle: Text(user.role.toUpperCase()),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Security',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: Icon(
+                            Icons.lock_outline,
+                            color: colorScheme.primary,
+                          ),
+                          title: const Text('Change Password'),
+                          subtitle: const Text('Update your account password'),
+                          trailing: const Icon(Icons.arrow_forward),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const ChangePasswordScreen(),
+                              ),
+                            );
+                          },
                         ),
                       ],
                     ),

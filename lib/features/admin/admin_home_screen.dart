@@ -11,6 +11,9 @@ import '../../models/notification_model.dart';
 import 'edit_product_screen.dart';
 import '../../widgets/product_image.dart';
 import 'reports_screen.dart';
+import '../customer/profile_edit_screen.dart';
+import 'app_settings_screen.dart';
+import 'security_screen.dart';
 
 class AdminHomeScreen extends StatefulWidget {
   const AdminHomeScreen({super.key});
@@ -1139,38 +1142,208 @@ class StatCard extends StatelessWidget {
   }
 }
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
   @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      final auth = context.read<AuthProvider>();
+      final userProvider = context.read<UserProvider>();
+      if (auth.user != null && userProvider.currentUser == null) {
+        userProvider.fetchUser(auth.user!.uid);
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return ListView(
-      children: [
-        const SizedBox(height: 16),
-        ListTile(
-          title: const Text('Admin Profile'),
-          leading: const Icon(Icons.person),
-          onTap: () {},
-        ),
-        ListTile(
-          title: const Text('App Settings'),
-          leading: const Icon(Icons.settings),
-          onTap: () {},
-        ),
-        ListTile(
-          title: const Text('Security'),
-          leading: const Icon(Icons.security),
-          onTap: () {},
-        ),
-        const Divider(),
-        ListTile(
-          title: const Text('Logout'),
-          leading: const Icon(Icons.logout, color: Colors.red),
-          onTap: () {
-            context.read<AuthProvider>().logout();
-          },
-        ),
-      ],
+    return Consumer2<UserProvider, AuthProvider>(
+      builder: (context, userProvider, authProvider, _) {
+        final user = userProvider.currentUser;
+        final authUser = authProvider.user;
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Profile Card
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      // Profile Photo
+                      Container(
+                        width: 60,
+                        height: 60,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Theme.of(context).colorScheme.primary,
+                            width: 2,
+                          ),
+                          color: Colors.grey[200],
+                        ),
+                        child: user?.profilePhotoUrl != null
+                            ? ClipOval(
+                                child: Image.network(
+                                  user!.profilePhotoUrl!,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return const Icon(Icons.person, size: 30);
+                                  },
+                                ),
+                              )
+                            : const Icon(Icons.person, size: 30),
+                      ),
+                      const SizedBox(width: 16),
+                      // Profile Info
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              user?.fullName ?? authUser?.email ?? 'Admin User',
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              user?.email ?? authUser?.email ?? '',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[600],
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 4),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.shade100,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                'Admin',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.blue.shade700,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Settings Options
+              const Text(
+                'Settings',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              ListTile(
+                title: const Text('Edit Admin Profile'),
+                subtitle: const Text('Update your profile information'),
+                leading: const Icon(Icons.person),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const ProfileEditScreen(),
+                    ),
+                  );
+                },
+              ),
+              ListTile(
+                title: const Text('App Settings'),
+                subtitle: const Text('Manage app preferences'),
+                leading: const Icon(Icons.settings),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const AppSettingsScreen(),
+                    ),
+                  );
+                },
+              ),
+              ListTile(
+                title: const Text('Security'),
+                subtitle: const Text('Password and security settings'),
+                leading: const Icon(Icons.security),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const SecurityScreen(),
+                    ),
+                  );
+                },
+              ),
+              const Divider(height: 32),
+              ListTile(
+                title: const Text('Logout'),
+                subtitle: const Text('Sign out from admin account'),
+                leading: const Icon(Icons.logout, color: Colors.red),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.red),
+                onTap: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Logout'),
+                      content: const Text('Are you sure you want to logout?'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Cancel'),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            context.read<AuthProvider>().logout();
+                            Navigator.pop(context);
+                          },
+                          child: const Text(
+                            'Logout',
+                            style: TextStyle(color: Colors.red),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
