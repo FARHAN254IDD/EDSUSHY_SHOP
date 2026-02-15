@@ -56,11 +56,24 @@ class _ProductListScreenState extends State<ProductListScreen> {
           return LayoutBuilder(
             builder: (context, constraints) {
               final columns = _gridColumns(constraints.maxWidth);
+              final isWide = constraints.maxWidth >= 900;
               return ResponsiveCenter(
                 child: SingleChildScrollView(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      _SearchBar(
+                        isWide: isWide,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const SearchProductsScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 16),
                       // Category filter
                       SizedBox(
                         height: 50,
@@ -92,11 +105,15 @@ class _ProductListScreenState extends State<ProductListScreen> {
                       GridView.builder(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: columns,
-                          childAspectRatio: 0.78,
-                          crossAxisSpacing: 16,
-                          mainAxisSpacing: 16,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 4,
+                        ),
+                        gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                          maxCrossAxisExtent: isWide ? 260 : 220,
+                          childAspectRatio: 0.7,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
                         ),
                         itemCount: productProvider.filteredProducts.length,
                         itemBuilder: (context, index) {
@@ -124,6 +141,9 @@ class ProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    const borderRadius = BorderRadius.all(Radius.circular(14));
+
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -133,21 +153,38 @@ class ProductCard extends StatelessWidget {
           ),
         );
       },
-      child: Card(
-        elevation: 2,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Image placeholder
-            Container(
-              height: 120,
-              color: Colors.grey[200],
-              child: productImageWidget(product, BoxFit.cover),
+      child: Material(
+        elevation: 1.5,
+        color: Colors.white,
+        borderRadius: borderRadius,
+        shadowColor: Colors.black.withOpacity(0.08),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: borderRadius,
+            border: Border.all(
+              color: colorScheme.outlineVariant.withOpacity(0.4),
             ),
-            // Product info
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(8),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(14),
+                ),
+                child: Container(
+                  color: Colors.grey[100],
+                  alignment: Alignment.center,
+                  height: 180,
+                  padding: const EdgeInsets.all(8),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: productImageWidget(product, BoxFit.contain),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -156,29 +193,81 @@ class ProductCard extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
                       ),
                     ),
-                    const Spacer(),
+                    const SizedBox(height: 8),
                     Row(
                       children: [
                         const Icon(Icons.star, size: 14, color: Colors.amber),
+                        const SizedBox(width: 4),
                         Text(
                           product.rating.toStringAsFixed(1),
                           style: const TextStyle(fontSize: 12),
                         ),
+                        const Spacer(),
+                        Text(
+                          'KSh ${product.price.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green,
+                          ),
+                        ),
                       ],
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'KSh ${product.price.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.green,
-                      ),
-                    ),
                   ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SearchBar extends StatelessWidget {
+  final bool isWide;
+  final VoidCallback onTap;
+
+  const _SearchBar({required this.isWide, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final borderRadius = BorderRadius.circular(isWide ? 14 : 999);
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: borderRadius,
+      child: Container(
+        height: isWide ? 52 : 46,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: borderRadius,
+          border: Border.all(
+            color: colorScheme.outlineVariant.withOpacity(0.4),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.search, size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'I am searching for...',
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: isWide ? 16 : 14,
                 ),
               ),
             ),

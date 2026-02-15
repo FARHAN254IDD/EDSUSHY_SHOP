@@ -27,6 +27,7 @@ dependencies:
   # UI
   shimmer: ^3.0.0
   google_fonts: ^6.2.1
+  shared_preferences: ^2.3.2
   
   # Networking
   http: ^1.2.0

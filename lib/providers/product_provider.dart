@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -10,6 +12,8 @@ class ProductProvider extends ChangeNotifier {
   List<Product> _filteredProducts = [];
   bool _isLoading = false;
   String _selectedCategory = 'All';
+  String _searchQuery = '';
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _productsSub;
 
   List<Product> get allProducts => _allProducts;
   List<Product> get filteredProducts => _filteredProducts;
@@ -17,75 +21,26 @@ class ProductProvider extends ChangeNotifier {
   String get selectedCategory => _selectedCategory;
 
   Future<void> fetchProducts() async {
+    if (_productsSub != null) return;
     _isLoading = true;
     notifyListeners();
-    try {
-      final snapshot = await _firestore.collection('products').get();
-      if (snapshot.docs.isEmpty) {
-        // If no products in Firestore, use sample data
-        _allProducts = SampleProductsService.getAllProducts();
-      } else {
-        final List<Product> products = [];
-        for (var doc in snapshot.docs) {
-          final data = Map<String, dynamic>.from(doc.data());
-          print('========== FETCHED PRODUCT FROM FIRESTORE ==========');
-          print('Doc ID: ${doc.id}');
-          print('Raw imageUrl: ${data['imageUrl']}');
-          print('Raw data: $data');
-          try {
-            // Convert any gs:// Firebase Storage paths to downloadable HTTPS URLs
-            if (data['imageUrl'] is String &&
-                (data['imageUrl'] as String).startsWith('gs://')) {
-              try {
-                final ref = FirebaseStorage.instance
-                    .refFromURL(data['imageUrl'] as String);
-                final url = await ref.getDownloadURL();
-                data['imageUrl'] = url;
-                print('Converted gs:// to: ${data['imageUrl']}');
-              } catch (e) {
-                // leave original value if conversion fails
-                print('Failed to convert imageUrl for ${doc.id}: $e');
-              }
-            }
-
-            // Convert any entries in imageUrls list
-            if (data['imageUrls'] is Iterable) {
-              final List urls = List.from(data['imageUrls']);
-              for (int i = 0; i < urls.length; i++) {
-                if (urls[i] is String && (urls[i] as String).startsWith('gs://')) {
-                  try {
-                    final ref = FirebaseStorage.instance.refFromURL(urls[i] as String);
-                    urls[i] = await ref.getDownloadURL();
-                  } catch (e) {
-                    print('Failed to convert imageUrls[$i] for ${doc.id}: $e');
-                  }
-                }
-              }
-              data['imageUrls'] = urls;
-            }
-          } catch (e) {
-            print('Error processing storage urls for ${doc.id}: $e');
-          }
-
-          final product = Product.fromMap(doc.id, data);
-          print('Created Product with imageUrl: ${product.imageUrl}');
-          print('====================================================');
-          products.add(product);
-        }
-        _allProducts = products;
-      }
-      _filteredProducts = _allProducts;
-      notifyListeners();
-    } catch (e) {
-      // If Firestore fails, use sample data
-      _allProducts = SampleProductsService.getAllProducts();
-      _filteredProducts = _allProducts;
-      print('Error fetching products from Firestore, using sample data: $e');
-      notifyListeners();
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
+    _productsSub = _firestore
+        .collection('products')
+        .snapshots()
+        .listen(
+          (snapshot) async {
+            await _handleProductsSnapshot(snapshot);
+          },
+          onError: (e) {
+            _allProducts = SampleProductsService.getAllProducts();
+            _applyFilters();
+            _isLoading = false;
+            print(
+              'Error fetching products from Firestore, using sample data: $e',
+            );
+            notifyListeners();
+          },
+        );
   }
 
   // Initialize with sample data immediately
@@ -101,36 +56,106 @@ class ProductProvider extends ChangeNotifier {
 
   void filterByCategory(String category) {
     _selectedCategory = category;
-    if (category == 'All') {
-      _filteredProducts = _allProducts;
-    } else {
-      _filteredProducts = _allProducts
-          .where((product) => product.category == category)
-          .toList();
-    }
+    _applyFilters();
     notifyListeners();
   }
 
   void searchProducts(String query) {
-    if (query.isEmpty) {
-      _filteredProducts = _selectedCategory == 'All'
-          ? _allProducts
-          : _allProducts
-              .where((p) => p.category == _selectedCategory)
-              .toList();
-    } else {
-      _filteredProducts = _allProducts
-          .where((product) =>
-              product.name.toLowerCase().contains(query.toLowerCase()) ||
-              product.description.toLowerCase().contains(query.toLowerCase()))
-          .toList();
-      if (_selectedCategory != 'All') {
-        _filteredProducts = _filteredProducts
-            .where((p) => p.category == _selectedCategory)
-            .toList();
-      }
-    }
+    _searchQuery = query.trim();
+    _applyFilters();
     notifyListeners();
+  }
+
+  void _applyFilters() {
+    final query = _searchQuery.toLowerCase();
+    Iterable<Product> results = _allProducts;
+
+    if (_selectedCategory != 'All') {
+      results = results.where((p) => p.category == _selectedCategory);
+    }
+
+    if (query.isNotEmpty) {
+      results = results.where((product) {
+        final name = product.name.toLowerCase();
+        final description = product.description.toLowerCase();
+        final category = product.category.toLowerCase();
+        final subcategory = (product.subcategory ?? '').toLowerCase();
+        final brand = (product.brand ?? '').toLowerCase();
+        final seller = (product.seller ?? '').toLowerCase();
+
+        return name.contains(query) ||
+            description.contains(query) ||
+            category.contains(query) ||
+            subcategory.contains(query) ||
+            brand.contains(query) ||
+            seller.contains(query);
+      });
+    }
+
+    _filteredProducts = results.toList();
+  }
+
+  Future<void> _handleProductsSnapshot(
+    QuerySnapshot<Map<String, dynamic>> snapshot,
+  ) async {
+    if (snapshot.docs.isEmpty) {
+      _allProducts = SampleProductsService.getAllProducts();
+      _applyFilters();
+      _isLoading = false;
+      notifyListeners();
+      return;
+    }
+
+    final List<Product> products = [];
+    for (var doc in snapshot.docs) {
+      final data = Map<String, dynamic>.from(doc.data());
+      try {
+        if (data['imageUrl'] is String &&
+            (data['imageUrl'] as String).startsWith('gs://')) {
+          try {
+            final ref = FirebaseStorage.instance.refFromURL(
+              data['imageUrl'] as String,
+            );
+            final url = await ref.getDownloadURL();
+            data['imageUrl'] = url;
+          } catch (e) {
+            print('Failed to convert imageUrl for ${doc.id}: $e');
+          }
+        }
+
+        if (data['imageUrls'] is Iterable) {
+          final List urls = List.from(data['imageUrls']);
+          for (int i = 0; i < urls.length; i++) {
+            if (urls[i] is String && (urls[i] as String).startsWith('gs://')) {
+              try {
+                final ref = FirebaseStorage.instance.refFromURL(
+                  urls[i] as String,
+                );
+                urls[i] = await ref.getDownloadURL();
+              } catch (e) {
+                print('Failed to convert imageUrls[$i] for ${doc.id}: $e');
+              }
+            }
+          }
+          data['imageUrls'] = urls;
+        }
+      } catch (e) {
+        print('Error processing storage urls for ${doc.id}: $e');
+      }
+
+      products.add(Product.fromMap(doc.id, data));
+    }
+
+    _allProducts = products;
+    _applyFilters();
+    _isLoading = false;
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _productsSub?.cancel();
+    super.dispose();
   }
 
   List<String> getCategories() {
