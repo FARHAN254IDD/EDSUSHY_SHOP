@@ -62,6 +62,8 @@ class _ProductListScreenState extends State<ProductListScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      const _PromoBanners(),
+                      const SizedBox(height: 16),
                       _SearchBar(
                         isWide: isWide,
                         onTap: () {
@@ -274,6 +276,73 @@ class _SearchBar extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _PromoBanners extends StatefulWidget {
+  const _PromoBanners();
+
+  @override
+  State<_PromoBanners> createState() => _PromoBannersState();
+}
+
+class _PromoBannersState extends State<_PromoBanners> {
+  final _controller = PageController();
+  final _banners = const [
+    'assets/images/black.jpg',
+    'assets/images/samsung.jpg',
+    'assets/images/shoes.jpg',
+  ];
+  int _activeIndex = 0;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: AspectRatio(
+            aspectRatio: 16 / 5,
+            child: PageView.builder(
+              controller: _controller,
+              itemCount: _banners.length,
+              onPageChanged: (index) {
+                setState(() => _activeIndex = index);
+              },
+              itemBuilder: (context, index) {
+                return Image.asset(
+                  _banners[index],
+                  fit: BoxFit.cover,
+                );
+              },
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(_banners.length, (index) {
+            final isActive = index == _activeIndex;
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              margin: const EdgeInsets.symmetric(horizontal: 3),
+              height: 6,
+              width: isActive ? 18 : 6,
+              decoration: BoxDecoration(
+                color: isActive ? Colors.black87 : Colors.black26,
+                borderRadius: BorderRadius.circular(999),
+              ),
+            );
+          }),
+        ),
+      ],
     );
   }
 }

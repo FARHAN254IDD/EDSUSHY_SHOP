@@ -49,4 +49,6 @@ flutter:
   uses-material-design: true
   # Add your assets and fonts here as needed
   assets:
-    - assets/images/
+    - assets/images/black.jpg
+    - assets/images/samsung.jpg
+    - assets/images/shoes.jpg
