@@ -23,13 +23,8 @@ class WishlistProvider extends ChangeNotifier {
       if (snapshot.docs.isNotEmpty) {
         _userWishlist = Wishlist.fromMap(snapshot.docs.first.id, snapshot.docs.first.data());
       } else {
-        // Create empty wishlist if doesn't exist
-        _userWishlist = Wishlist(
-          id: '',
-          userId: userId,
-          productIds: [],
-          createdAt: DateTime.now(),
-        );
+        // No wishlist yet; keep null and create only when user adds an item.
+        _userWishlist = null;
       }
     } catch (e) {
       print('Error fetching wishlist: $e');
@@ -41,7 +36,7 @@ class WishlistProvider extends ChangeNotifier {
 
   Future<void> addToWishlist(String userId, String productId) async {
     try {
-      if (_userWishlist == null) {
+      if (_userWishlist == null || _userWishlist!.id.isEmpty) {
         // Create new wishlist
         final doc = await _firestore.collection('wishlists').add({
           'userId': userId,

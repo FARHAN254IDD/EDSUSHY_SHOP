@@ -19,17 +19,24 @@ class ProductDetailScreen extends StatefulWidget {
 
 class _ProductDetailScreenState extends State<ProductDetailScreen> {
   late int quantity;
+  late Future<List<Review>?> _reviewsFuture;
 
   @override
   void initState() {
     super.initState();
     quantity = 1;
+    _reviewsFuture = context.read<ReviewProvider>().fetchProductReviews(widget.product.id);
+    Future.microtask(() {
+      final userId = context.read<AuthProvider>().user?.uid;
+      if (userId != null) {
+        context.read<WishlistProvider>().fetchUserWishlist(userId);
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final cartProvider = Provider.of<CartProvider>(context);
-    final reviewProvider = Provider.of<ReviewProvider>(context);
     final authProvider = Provider.of<AuthProvider>(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -45,19 +52,31 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   isInWishlist ? Icons.favorite : Icons.favorite_border,
                   color: isInWishlist ? Colors.red : null,
                 ),
-                onPressed: () {
-                  if (authProvider.user != null) {
+                onPressed: () async {
+                  final userId = authProvider.user?.uid;
+                  if (userId == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Please log in to use wishlist')),
+                    );
+                    return;
+                  }
+
+                  try {
                     if (isInWishlist) {
-                      wishlist.removeFromWishlist(
-                        authProvider.user!.uid,
-                        widget.product.id,
+                      await wishlist.removeFromWishlist(userId, widget.product.id);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Removed from wishlist')),
                       );
                     } else {
-                      wishlist.addToWishlist(
-                        authProvider.user!.uid,
-                        widget.product.id,
+                      await wishlist.addToWishlist(userId, widget.product.id);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Added to wishlist')),
                       );
                     }
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Wishlist update failed')),
+                    );
                   }
                 },
               );
@@ -280,7 +299,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   
                   // Reviews List
                   FutureBuilder<List<Review>?>(
-                    future: reviewProvider.fetchProductReviews(widget.product.id),
+                    future: _reviewsFuture,
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
                         return Center(child: CircularProgressIndicator());
@@ -417,21 +436,27 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             child: Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
-              if (title.isNotEmpty && comment.isNotEmpty) {
-                reviewProvider.addReview(
-                  widget.product.id,
-                  authProvider.user!.uid,
-                  authProvider.user!.email ?? 'Anonymous',
-                  rating.toDouble(),
-                  title,
-                  comment,
-                );
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Review posted!')),
-                );
+            onPressed: () async {
+              if (title.isEmpty || comment.isEmpty) {
+                return;
               }
+
+              await reviewProvider.addReview(
+                widget.product.id,
+                authProvider.user!.uid,
+                authProvider.user!.email ?? 'Anonymous',
+                rating.toDouble(),
+                title,
+                comment,
+              );
+              if (!mounted) return;
+              setState(() {
+                _reviewsFuture = reviewProvider.fetchProductReviews(widget.product.id);
+              });
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Review posted!')),
+              );
             },
             child: Text('Submit'),
           ),
