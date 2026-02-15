@@ -28,7 +28,6 @@ class _SearchProductsScreenState extends State<SearchProductsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
     final isWide = MediaQuery.of(context).size.width >= 900;
 
     return Scaffold(

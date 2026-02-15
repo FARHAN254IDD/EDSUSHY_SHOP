@@ -343,7 +343,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          user.email ?? authUser.email ?? 'No email',
+                          user.email.isEmpty ? 'No email' : user.email,
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.grey[600],

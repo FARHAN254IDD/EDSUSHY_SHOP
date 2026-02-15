@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../providers/product_provider.dart';
 import '../../providers/order_provider.dart';
 import '../../providers/user_provider.dart';
@@ -9,6 +10,7 @@ import '../../models/product_model.dart';
 import '../../models/notification_model.dart';
 import 'edit_product_screen.dart';
 import '../../widgets/product_image.dart';
+import 'reports_screen.dart';
 
 class AdminHomeScreen extends StatefulWidget {
   const AdminHomeScreen({super.key});
@@ -24,6 +26,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     'Products',
     'Orders',
     'Customers',
+    'Reports',
     'App Content',
     'Payments',
     'Settings',
@@ -33,6 +36,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     Icons.inventory_2,
     Icons.receipt_long,
     Icons.people,
+    Icons.analytics,
     Icons.campaign,
     Icons.payment,
     Icons.settings,
@@ -47,6 +51,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
       const ProductsManagementScreen(),
       const OrdersManagementScreen(),
       const CustomersManagementScreen(),
+      const ReportsScreen(),
       const AppContentManagementScreen(),
       const PaymentsManagementScreen(),
       const SettingsScreen(),
@@ -403,9 +408,32 @@ class OrderCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Order #${order.id.substring(0, 8)}',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Order #${order.id.substring(0, 8)}',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                      ),
+                      const SizedBox(height: 4),
+                      FutureBuilder<DocumentSnapshot>(
+                        future: FirebaseFirestore.instance
+                            .collection('users')
+                            .doc(order.userId)
+                            .get(),
+                        builder: (context, snapshot) {
+                          final userEmail = snapshot.data?.get('email') ?? 'User ${order.userId.substring(0, 6)}';
+                          return Text(
+                            '👤 $userEmail',
+                            style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          );
+                        },
+                      ),
+                    ],
+                  ),
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),

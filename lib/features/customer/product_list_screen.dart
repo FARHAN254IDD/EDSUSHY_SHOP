@@ -15,12 +15,6 @@ class ProductListScreen extends StatefulWidget {
 }
 
 class _ProductListScreenState extends State<ProductListScreen> {
-  int _gridColumns(double width) {
-    if (width >= 1200) return 4;
-    if (width >= 900) return 3;
-    return 2;
-  }
-
   @override
   void initState() {
     super.initState();
@@ -55,7 +49,6 @@ class _ProductListScreenState extends State<ProductListScreen> {
 
           return LayoutBuilder(
             builder: (context, constraints) {
-              final columns = _gridColumns(constraints.maxWidth);
               final isWide = constraints.maxWidth >= 900;
               return ResponsiveCenter(
                 child: SingleChildScrollView(
