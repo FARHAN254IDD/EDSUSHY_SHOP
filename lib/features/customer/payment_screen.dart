@@ -266,7 +266,13 @@ class _PaymentScreenState extends State<PaymentScreen> {
                                   // Clear cart
                                   context.read<CartProvider>().clearCart();
                                   
+                                  // Small delay to ensure Firestore syncs
+                                  await Future.delayed(const Duration(milliseconds: 500));
+                                  
                                   if (mounted) {
+                                    // Refresh user orders to show the new unpaid order
+                                    await context.read<OrderProvider>().fetchUserOrders(widget.order.userId);
+                                    
                                     // Show success message
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
@@ -276,10 +282,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
                                       ),
                                     );
                                     
-                                    // Redirect to orders page
+                                    // Redirect to orders page (orders list is now refreshed)
                                     Navigator.of(context).pop(); // Close payment screen
-                                    // Fetch user orders to refresh the list
-                                    await context.read<OrderProvider>().fetchUserOrders(widget.order.userId);
                                   }
                                 } else if (mounted) {
                                   setState(() => _paymentInitiated = false);
