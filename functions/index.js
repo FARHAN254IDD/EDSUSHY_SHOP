@@ -202,15 +202,16 @@ exports.mpesaCallback = functions.https.onRequest(async (req, res) => {
           updatedAt: admin.firestore.FieldValue.serverTimestamp()
         });
 
-        // Update corresponding order
+        // Update corresponding order to toBeShipped and mark payment as completed
         await db.collection('orders').doc(orderId).update({
           paymentStatus: 'completed',
+          status: 'toBeShipped',  // Change from pending/unpaid to toBeShipped
           mpesaReceiptNumber: mpesaReceiptNumber,
           transactionId: mpesaReceiptNumber,
           updatedAt: admin.firestore.FieldValue.serverTimestamp()
         });
 
-        console.log(`Payment successful for order ${orderId}`);
+        console.log(`Payment successful for order ${orderId}. Order status updated to toBeShipped.`);
       } else {
         // Payment failed or cancelled
         const failureReason = resultCode === 1 ? 'User cancelled' : resultDesc;
@@ -220,9 +221,10 @@ exports.mpesaCallback = functions.https.onRequest(async (req, res) => {
           updatedAt: admin.firestore.FieldValue.serverTimestamp()
         });
 
-        // Update order status to failed
+        // Keep order as unpaid if payment failed
         await db.collection('orders').doc(orderId).update({
           paymentStatus: 'failed',
+          status: 'unpaid',  // Keep as unpaid
           failureReason: failureReason,
           updatedAt: admin.firestore.FieldValue.serverTimestamp()
         });

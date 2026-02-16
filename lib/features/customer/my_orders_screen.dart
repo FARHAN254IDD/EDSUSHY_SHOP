@@ -97,15 +97,16 @@ class OrderCard extends StatelessWidget {
   Color _getStatusColor() {
     final statusStr = order.status.toString().split('.').last;
     switch (statusStr) {
-      case 'pending':
+      case 'unpaid':
         return Colors.orange;
-      case 'confirmed':
+      case 'toBeShipped':
         return Colors.blue;
-      case 'processing':
       case 'shipped':
         return Colors.purple;
-      case 'delivered':
+      case 'toBeReviewed':
         return Colors.green;
+      case 'returnFunds':
+        return Colors.red;
       case 'cancelled':
         return Colors.red;
       default:

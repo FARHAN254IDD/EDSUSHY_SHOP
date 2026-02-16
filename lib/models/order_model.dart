@@ -1,4 +1,11 @@
-enum OrderStatus { pending, confirmed, processing, shipped, delivered, cancelled }
+enum OrderStatus { 
+  unpaid,           // Payment initiated but not yet completed
+  toBeShipped,      // Payment completed, ready for shipping
+  shipped,          // Order has been shipped
+  toBeReviewed,     // Delivered, awaiting review
+  returnFunds,      // Customer requested return/refund
+  cancelled 
+}
 
 enum PaymentMethod { mpesa, card, paypal }
 
@@ -54,7 +61,7 @@ class Order {
     required this.userId,
     required this.items,
     required this.totalAmount,
-    this.status = OrderStatus.pending,
+    this.status = OrderStatus.unpaid,
     required this.paymentMethod,
     this.paymentStatus = 'pending',
     required this.createdAt,
@@ -74,7 +81,7 @@ class Order {
       totalAmount: (data['totalAmount'] ?? 0.0).toDouble(),
       status: OrderStatus.values.firstWhere(
         (status) => status.toString().split('.').last == data['status'],
-        orElse: () => OrderStatus.pending,
+        orElse: () => OrderStatus.unpaid,
       ),
       paymentMethod: PaymentMethod.values.firstWhere(
         (method) => method.toString().split('.').last == data['paymentMethod'],

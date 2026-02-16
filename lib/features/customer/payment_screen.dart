@@ -248,6 +248,23 @@ class _PaymentScreenState extends State<PaymentScreen> {
                                 );
 
                                 if (mounted && success) {
+                                  // Create order immediately as "unpaid" when STK push is sent
+                                  final unpaidOrder = Order(
+                                    id: widget.order.id,
+                                    userId: widget.order.userId,
+                                    items: widget.order.items,
+                                    totalAmount: widget.order.totalAmount,
+                                    status: OrderStatus.unpaid, // Mark as unpaid initially
+                                    paymentMethod: widget.order.paymentMethod,
+                                    paymentStatus: 'pending',
+                                    createdAt: DateTime.now(),
+                                    shippingAddress: widget.order.shippingAddress,
+                                    transactionId: '',
+                                  );
+                                  
+                                  // Save order to Firestore as unpaid
+                                  await context.read<OrderProvider>().createOrder(unpaidOrder);
+                                  
                                   setState(() => _checkingStatus = true);
                                   await Future.delayed(
                                       const Duration(seconds: 2));
@@ -317,9 +334,21 @@ class _PaymentScreenState extends State<PaymentScreen> {
                                       );
 
                                       if (mounted && success) {
+                                        // Update order to "toBeShipped" and mark payment as paid
                                         await context
                                             .read<OrderProvider>()
-                                            .createOrder(widget.order);
+                                            .updateOrderStatus(
+                                              widget.order.id, 
+                                              OrderStatus.toBeShipped
+                                            );
+                                            
+                                        await context
+                                            .read<OrderProvider>()
+                                            .updatePaymentStatus(
+                                              widget.order.id,
+                                              'completed'
+                                            );
+                                            
                                         context
                                             .read<CartProvider>()
                                             .clearCart();
@@ -329,7 +358,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                                               .showSnackBar(
                                             const SnackBar(
                                               content: Text(
-                                                  'Payment successful! Order placed.'),
+                                                  'Payment successful! Order will be shipped soon.'),
                                               backgroundColor: Colors.green,
                                             ),
                                           );

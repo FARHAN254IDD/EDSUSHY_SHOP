@@ -100,6 +100,21 @@ class OrderProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> requestRefund(String orderId, {String? reason}) async {
+    try {
+      await _firestore.collection('orders').doc(orderId).update({
+        'status': 'returnFunds',
+        'refundRequested': true,
+        'refundReason': reason ?? 'User requested refund',
+        'refundRequestedAt': DateTime.now().toIso8601String(),
+      });
+      await fetchAllOrders();
+    } catch (e) {
+      print('Error requesting refund: $e');
+      rethrow;
+    }
+  }
+
   Future<void> confirmPayment(String orderId) async {
     try {
       await _firestore.collection('orders').doc(orderId).update({

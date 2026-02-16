@@ -9,15 +9,16 @@ class OrderDetailsScreen extends StatelessWidget {
 
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
-      case 'pending':
+      case 'unpaid':
         return Colors.orange;
-      case 'confirmed':
+      case 'toBeShipped':
         return Colors.blue;
-      case 'processing':
       case 'shipped':
         return Colors.purple;
-      case 'delivered':
+      case 'toBeReviewed':
         return Colors.green;
+      case 'returnFunds':
+        return Colors.red;
       case 'cancelled':
         return Colors.red;
       default:
@@ -27,7 +28,12 @@ class OrderDetailsScreen extends StatelessWidget {
 
   bool _canCancel() {
     final statusStr = order.status.toString().split('.').last;
-    return statusStr == 'pending';
+    return statusStr == 'unpaid';
+  }
+
+  bool _canRequestRefund() {
+    final statusStr = order.status.toString().split('.').last;
+    return statusStr == 'toBeReviewed';
   }
 
   String _formatDate(DateTime date) {
@@ -259,6 +265,23 @@ class OrderDetailsScreen extends StatelessWidget {
                   ),
                 ),
               const SizedBox(height: 16),
+
+              // Request Refund Button (show when order is delivered and awaiting review)
+              if (_canRequestRefund())
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      _showRefundDialog(context);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    child: const Text('Request Refund', style: TextStyle(color: Colors.white)),
+                  ),
+                ),
+              const SizedBox(height: 16),
             ],
           ),
         ),
@@ -293,5 +316,60 @@ class OrderDetailsScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  void _showRefundDialog(BuildContext context) {
+    final reasonController = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Request Refund'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Please provide a reason for your refund request:',
+              style: TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: reasonController,
+              maxLines: 3,
+              decoration: InputDecoration(
+                hintText: 'Enter reason (optional)',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              context.read<OrderProvider>().requestRefund(
+                order.id,
+                reason: reasonController.text.isEmpty ? null : reasonController.text,
+              );
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Refund request submitted. We will process it soon.'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            },
+            child: const Text('Submit Request'),
+          ),
+        ],
+      ),
+    );
+    
+    reasonController.dispose();
   }
 }
