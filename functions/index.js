@@ -3,7 +3,16 @@ const admin = require('firebase-admin');
 const axios = require('axios');
 const express = require('express');
 
-admin.initializeApp();
+// Initialize Firebase Admin SDK with credentials from Render environment
+if (process.env.FIREBASE_CREDENTIALS_JSON) {
+  const credentials = JSON.parse(process.env.FIREBASE_CREDENTIALS_JSON);
+  admin.initializeApp({
+    credential: admin.credential.cert(credentials),
+  });
+} else {
+  // Local development - uses emulator or default credentials
+  admin.initializeApp();
+}
 
 const db = admin.firestore();
 const auth = admin.auth();
