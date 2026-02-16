@@ -277,7 +277,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
                                     );
                                     
                                     // Redirect to orders page
-                                    Navigator.popUntil(context, (route) => route.isFirst);
+                                    Navigator.of(context).pop(); // Close payment screen
+                                    // Fetch user orders to refresh the list
+                                    await context.read<OrderProvider>().fetchUserOrders(widget.order.userId);
                                   }
                                 } else if (mounted) {
                                   setState(() => _paymentInitiated = false);
