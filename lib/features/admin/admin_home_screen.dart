@@ -690,6 +690,11 @@ class CustomerCard extends StatelessWidget {
               onTap: () => _viewOrderHistory(context, customer.uid),
               child: const Text('View Orders'),
             ),
+            if (customer.role != 'admin')
+              PopupMenuItem(
+                onTap: () => Future.microtask(() => _promoteToAdmin(context, customer)),
+                child: const Text('Promote to Admin'),
+              ),
             PopupMenuItem(
               onTap: () => _toggleBlockStatus(context, customer),
               child: Text(customer.isBlocked ? 'Unblock' : 'Block'),
@@ -727,6 +732,28 @@ class CustomerCard extends StatelessWidget {
               Navigator.pop(context);
             },
             child: Text(customer.isBlocked ? 'Unblock' : 'Block'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _promoteToAdmin(BuildContext context, dynamic customer) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Promote to Admin'),
+        content: Text('Give admin access to ${customer.email}?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () async {
+              await context.read<UserProvider>().updateUserRole(customer.uid, 'admin');
+              if (context.mounted) {
+                Navigator.pop(context);
+              }
+            },
+            child: const Text('Promote'),
           ),
         ],
       ),

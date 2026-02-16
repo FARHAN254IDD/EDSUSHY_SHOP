@@ -162,6 +162,7 @@ class UserProvider extends ChangeNotifier {
         );
         notifyListeners();
       }
+      await fetchAllUsers();
     } catch (e) {
       print('Error updating user role: $e');
     }
