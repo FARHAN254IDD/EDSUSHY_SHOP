@@ -9,8 +9,8 @@ class PaymentProvider extends ChangeNotifier {
   String? _checkoutRequestId;
   Map<String, dynamic>? _lastTransactionData;
 
-  // M-Pesa Backend URL (ngrok tunnel)
-  static const String _firebaseBaseUrl = 'https://b76c-129-222-147-252.ngrok-free.app';
+  // M-Pesa Backend URL (Render deployment)
+  static const String _firebaseBaseUrl = 'https://edsushy-shop-1.onrender.com';
 
   bool get isProcessing => _isProcessing;
   String? get errorMessage => _errorMessage;
