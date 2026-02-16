@@ -22,14 +22,13 @@ class PaymentScreen extends StatefulWidget {
 class _PaymentScreenState extends State<PaymentScreen> {
   bool _agreedToTerms = false;
   bool _paymentInitiated = false;
-  bool _checkingStatus = false;
 
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
       onWillPop: () async {
         // Don't allow going back during payment
-        if (_paymentInitiated && !_checkingStatus) {
+        if (_paymentInitiated) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Please complete or cancel your payment'),
@@ -43,7 +42,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
         appBar: AppBar(
           title: const Text('Payment'),
           elevation: 0,
-          automaticallyImplyLeading: !_paymentInitiated || _checkingStatus,
+          automaticallyImplyLeading: !_paymentInitiated,
         ),
         body: Consumer<PaymentProvider>(
           builder: (context, paymentProvider, child) {
@@ -166,7 +165,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
                               onPressed: () {
                                 setState(() {
                                   _paymentInitiated = false;
-                                  _checkingStatus = false;
                                 });
                                 paymentProvider.clearMessages();
                               },
@@ -265,11 +263,21 @@ class _PaymentScreenState extends State<PaymentScreen> {
                                   // Save order to Firestore as unpaid
                                   await context.read<OrderProvider>().createOrder(unpaidOrder);
                                   
-                                  setState(() => _checkingStatus = true);
-                                  await Future.delayed(
-                                      const Duration(seconds: 2));
+                                  // Clear cart
+                                  context.read<CartProvider>().clearCart();
+                                  
                                   if (mounted) {
-                                    _showPaymentStatusBottomSheet();
+                                    // Show success message
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('STK push sent! Check your phone. Order created as unpaid.'),
+                                        backgroundColor: Colors.green,
+                                        duration: Duration(seconds: 3),
+                                      ),
+                                    );
+                                    
+                                    // Redirect to orders page
+                                    Navigator.popUntil(context, (route) => route.isFirst);
                                   }
                                 } else if (mounted) {
                                   setState(() => _paymentInitiated = false);
@@ -288,158 +296,39 @@ class _PaymentScreenState extends State<PaymentScreen> {
                               )
                             : const Text('Complete Payment'),
                       ),
-                    )
-                  else
-                    // Checking status button (show after payment initiated)
-                    Column(
+                    ),
+                  const SizedBox(height: 24),
+                  
+                  // Information card
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.blue[50],
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.blue[200]!),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.orange[50],
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.orange[200]!),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Icon(Icons.info_outline, color: Colors.orange[700]),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      'Please check your phone for the M-Pesa prompt\nand enter your PIN to complete the payment.',
-                                      style: TextStyle(color: Colors.orange[700]),
-                                    ),
-                                  ),
-                                ],
+                        Row(
+                          children: [
+                            Icon(Icons.info_outline, color: Colors.blue[700]),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'After clicking "Complete Payment", check your phone for the STK push\nand enter your PIN to complete the payment.',
+                                style: TextStyle(color: Colors.blue[700]),
                               ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        SizedBox(
-                          width: double.infinity,
-                          height: 54,
-                          child: ElevatedButton(
-                            onPressed: _checkingStatus
-                                ? () async {
-                                    if (paymentProvider.checkoutRequestId != null) {
-                                      setState(() => _checkingStatus = true);
-                                      final success =
-                                          await paymentProvider.checkPaymentStatus(
-                                        checkoutRequestId: paymentProvider
-                                            .checkoutRequestId!,
-                                      );
-
-                                      if (mounted && success) {
-                                        // Update order to "toBeShipped" and mark payment as paid
-                                        await context
-                                            .read<OrderProvider>()
-                                            .updateOrderStatus(
-                                              widget.order.id, 
-                                              OrderStatus.toBeShipped
-                                            );
-                                            
-                                        await context
-                                            .read<OrderProvider>()
-                                            .updatePaymentStatus(
-                                              widget.order.id,
-                                              'completed'
-                                            );
-                                            
-                                        context
-                                            .read<CartProvider>()
-                                            .clearCart();
-
-                                        if (mounted) {
-                                          ScaffoldMessenger.of(context)
-                                              .showSnackBar(
-                                            const SnackBar(
-                                              content: Text(
-                                                  'Payment successful! Order will be shipped soon.'),
-                                              backgroundColor: Colors.green,
-                                            ),
-                                          );
-                                          Navigator.popUntil(context,
-                                              (route) => route.isFirst);
-                                        }
-                                      } else if (mounted) {
-                                        setState(() => _checkingStatus = false);
-                                      }
-                                    }
-                                  }
-                                : null,
-                            child: _checkingStatus
-                                ? const SizedBox(
-                                    height: 20,
-                                    width: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                          Colors.white),
-                                    ),
-                                  )
-                                : const Text('Confirm Payment'),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          width: double.infinity,
-                          height: 54,
-                          child: OutlinedButton(
-                            onPressed: () {
-                              setState(() {
-                                _paymentInitiated = false;
-                                _checkingStatus = false;
-                              });
-                              paymentProvider.resetPaymentState();
-                            },
-                            child: const Text('Cancel Payment'),
-                          ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
+                  ),
                 ],
               ),
             );
           },
-        ),
-      ),
-    );
-  }
-
-  void _showPaymentStatusBottomSheet() {
-    showModalBottomSheet(
-      context: context,
-      isDismissible: false,
-      enableDrag: false,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 16),
-            const Text(
-              'Payment Status',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 24),
-            const CircularProgressIndicator(),
-            const SizedBox(height: 16),
-            const Text(
-              'Waiting for payment confirmation...',
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Do not close this screen',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-            ),
-            const SizedBox(height: 24),
-          ],
         ),
       ),
     );
