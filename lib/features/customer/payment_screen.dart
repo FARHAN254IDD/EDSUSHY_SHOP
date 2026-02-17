@@ -266,8 +266,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
                                   // Clear cart
                                   context.read<CartProvider>().clearCart();
                                   
-                                  // Small delay to ensure Firestore syncs
-                                  await Future.delayed(const Duration(milliseconds: 500));
+                                  // Longer delay to ensure Firestore syncs before navigating
+                                  await Future.delayed(const Duration(milliseconds: 1000));
                                   
                                   if (mounted) {
                                     // Refresh user orders to show the new unpaid order

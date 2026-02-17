@@ -68,7 +68,8 @@ class OrderProvider extends ChangeNotifier {
           .collection('orders')
           .doc(orderId)
           .update({'status': status.toString().split('.').last});
-      await fetchUserOrders('');
+      await fetchAllOrders();
+      notifyListeners();
     } catch (e) {
       print('Error updating order: $e');
     }

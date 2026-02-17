@@ -8,6 +8,7 @@ import '../../providers/admin_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../models/product_model.dart';
 import '../../models/notification_model.dart';
+import '../../models/order_model.dart' as order_model;
 import 'edit_product_screen.dart';
 import '../../widgets/product_image.dart';
 import 'reports_screen.dart';
@@ -485,15 +486,16 @@ class OrderCard extends StatelessWidget {
   Color _getStatusColor(dynamic status) {
     final statusStr = status.toString().split('.').last;
     switch (statusStr) {
-      case 'pending':
+      case 'unpaid':
         return Colors.orange;
-      case 'confirmed':
+      case 'toBeShipped':
         return Colors.blue;
-      case 'processing':
       case 'shipped':
         return Colors.purple;
-      case 'delivered':
+      case 'toBeReviewed':
         return Colors.green;
+      case 'returnFunds':
+        return Colors.red;
       case 'cancelled':
         return Colors.red;
       default:
@@ -509,17 +511,29 @@ class OrderCard extends StatelessWidget {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            'Pending',
-            'Confirmed',
-            'Processing',
+            'Unpaid',
+            'To Be Shipped',
             'Shipped',
-            'Delivered',
+            'To Be Reviewed',
+            'Return Funds',
             'Cancelled',
           ]
               .map((status) => ListTile(
                     title: Text(status),
                     onTap: () {
-                      final ordStatus = _parseOrderStatusString(status);
+                      // Parse the enum value correctly
+                      final statusMap = {
+                        'Unpaid': 'unpaid',
+                        'To Be Shipped': 'toBeShipped',
+                        'Shipped': 'shipped',
+                        'To Be Reviewed': 'toBeReviewed',
+                        'Return Funds': 'returnFunds',
+                        'Cancelled': 'cancelled',
+                      };
+                      final statusValue = statusMap[status] ?? 'unpaid';
+                      
+                      // Find the matching OrderStatus enum value
+                      final ordStatus = _parseOrderStatusString(statusValue);
                       context.read<OrderProvider>().updateOrderStatus(order.id, ordStatus);
                       Navigator.pop(context);
                     },
@@ -531,22 +545,21 @@ class OrderCard extends StatelessWidget {
   }
 
   dynamic _parseOrderStatusString(String status) {
-    final statusStr = status.toLowerCase();
-    switch (statusStr) {
-      case 'pending':
-        return 'pending';
-      case 'confirmed':
-        return 'confirmed';
-      case 'processing':
-        return 'processing';
+    switch (status) {
+      case 'unpaid':
+        return order_model.OrderStatus.unpaid;
+      case 'toBeShipped':
+        return order_model.OrderStatus.toBeShipped;
       case 'shipped':
-        return 'shipped';
-      case 'delivered':
-        return 'delivered';
+        return order_model.OrderStatus.shipped;
+      case 'toBeReviewed':
+        return order_model.OrderStatus.toBeReviewed;
+      case 'returnFunds':
+        return order_model.OrderStatus.returnFunds;
       case 'cancelled':
-        return 'cancelled';
+        return order_model.OrderStatus.cancelled;
       default:
-        return 'pending';
+        return order_model.OrderStatus.unpaid;
     }
   }
 

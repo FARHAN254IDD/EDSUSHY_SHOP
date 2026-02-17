@@ -29,58 +29,68 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
   Widget build(BuildContext context) {
     return Consumer<OrderProvider>(
       builder: (context, orderProvider, child) {
-        return SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'My Orders',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 16),
-                if (orderProvider.isLoading)
-                  const Center(child: CircularProgressIndicator())
-                else if (orderProvider.userOrders.isEmpty)
-                  Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 40),
-                      child: Column(
-                        children: [
-                          Icon(Icons.shopping_bag_outlined, size: 60, color: Colors.grey[400]),
-                          const SizedBox(height: 16),
-                          Text(
-                            'No orders yet',
-                            style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-                          ),
-                          const SizedBox(height: 24),
-                          ElevatedButton(
-                            onPressed: widget.onStartShopping ?? () {},
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.deepPurple,
-                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                            ),
-                            child: const Text(
-                              'Start Shopping',
-                              style: TextStyle(color: Colors.white),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                else
-                  ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: orderProvider.userOrders.length,
-                    itemBuilder: (context, index) {
-                      final order = orderProvider.userOrders[index];
-                      return OrderCard(order: order);
-                    },
+        final userId = context.read<AuthProvider>().user?.uid ?? '';
+        
+        return RefreshIndicator(
+          onRefresh: () async {
+            if (userId.isNotEmpty) {
+              await context.read<OrderProvider>().fetchUserOrders(userId);
+            }
+          },
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'My Orders',
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                   ),
-              ],
+                  const SizedBox(height: 16),
+                  if (orderProvider.isLoading)
+                    const Center(child: CircularProgressIndicator())
+                  else if (orderProvider.userOrders.isEmpty)
+                    Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 40),
+                        child: Column(
+                          children: [
+                            Icon(Icons.shopping_bag_outlined, size: 60, color: Colors.grey[400]),
+                            const SizedBox(height: 16),
+                            Text(
+                              'No orders yet',
+                              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                            ),
+                            const SizedBox(height: 24),
+                            ElevatedButton(
+                              onPressed: widget.onStartShopping ?? () {},
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.deepPurple,
+                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                              ),
+                              child: const Text(
+                                'Start Shopping',
+                                style: TextStyle(color: Colors.white),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  else
+                    ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: orderProvider.userOrders.length,
+                      itemBuilder: (context, index) {
+                        final order = orderProvider.userOrders[index];
+                        return OrderCard(order: order);
+                      },
+                    ),
+                ],
+              ),
             ),
           ),
         );
