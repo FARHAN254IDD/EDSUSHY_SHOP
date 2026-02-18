@@ -484,10 +484,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 comment,
               );
               if (!mounted) return;
-              setState(() {
-                _reviewsFuture = reviewProvider.fetchProductReviews(
-                  widget.product.id,
-                );
+              Future.microtask(() {
+                if (!mounted) return;
+                setState(() {
+                  _reviewsFuture = reviewProvider.fetchProductReviews(
+                    widget.product.id,
+                  );
+                });
               });
               Navigator.pop(context);
               ScaffoldMessenger.of(

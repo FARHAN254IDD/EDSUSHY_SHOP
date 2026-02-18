@@ -15,11 +15,16 @@ service cloud.firestore {
       allow create: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Orders - users can see their own, admins can see all
+    // Orders - users can see/query their own, admins can see all
     match /orders/{orderId} {
       allow read: if isOwner(orderId) || isAdmin();
       allow create: if request.auth != null;
       allow update, delete: if isAdmin();
+    }
+
+    // Allow customers to query their own orders collection
+    match /orders {
+      allow query: if request.auth != null;
     }
 
     // Reviews - authenticated users can read; owners can write their own

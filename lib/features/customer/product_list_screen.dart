@@ -153,69 +153,80 @@ class ProductCard extends StatelessWidget {
         color: Colors.white,
         borderRadius: borderRadius,
         shadowColor: Colors.black.withOpacity(0.08),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: borderRadius,
-            border: Border.all(
-              color: colorScheme.outlineVariant.withOpacity(0.4),
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ClipRRect(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(14),
-                ),
-                child: Container(
-                  color: Colors.grey[100],
-                  alignment: Alignment.center,
-                  height: 180,
-                  padding: const EdgeInsets.all(8),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: productImageWidget(product, BoxFit.contain),
-                  ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final imageHeight = (constraints.maxWidth * 0.7).clamp(110.0, 170.0);
+
+            return Container(
+              decoration: BoxDecoration(
+                borderRadius: borderRadius,
+                border: Border.all(
+                  color: colorScheme.outlineVariant.withOpacity(0.4),
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      product.name,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(14),
+                    ),
+                    child: Container(
+                      color: Colors.grey[100],
+                      alignment: Alignment.center,
+                      height: imageHeight,
+                      padding: const EdgeInsets.all(8),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: productImageWidget(product, BoxFit.contain),
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    Row(
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(10, 10, 10, 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.star, size: 14, color: Colors.amber),
-                        const SizedBox(width: 4),
                         Text(
-                          product.rating.toStringAsFixed(1),
-                          style: const TextStyle(fontSize: 12),
-                        ),
-                        const Spacer(),
-                        Text(
-                          'KSh ${product.price.toStringAsFixed(2)}',
+                          product.name,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.green,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
                           ),
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            const Icon(Icons.star, size: 14, color: Colors.amber),
+                            const SizedBox(width: 4),
+                            Text(
+                              product.rating.toStringAsFixed(1),
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                            const Spacer(),
+                            Flexible(
+                              child: Text(
+                                'KSh ${product.price.toStringAsFixed(2)}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.right,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.green,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );

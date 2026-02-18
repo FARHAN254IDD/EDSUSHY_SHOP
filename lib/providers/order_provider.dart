@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:async';
 import '../models/order_model.dart' as order_model;
 
 class OrderProvider extends ChangeNotifier {
@@ -7,6 +8,7 @@ class OrderProvider extends ChangeNotifier {
   List<order_model.Order> _userOrders = [];
   List<order_model.Order> _allOrders = [];
   bool _isLoading = false;
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _userOrdersSubscription;
 
   List<order_model.Order> get userOrders => _userOrders;
   List<order_model.Order> get allOrders => _allOrders;
@@ -31,6 +33,38 @@ class OrderProvider extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  void listenToUserOrders(String userId) {
+    _userOrdersSubscription?.cancel();
+    _isLoading = true;
+    notifyListeners();
+
+    _userOrdersSubscription = _firestore
+        .collection('orders')
+        .where('userId', isEqualTo: userId)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .listen(
+      (snapshot) {
+        _userOrders = snapshot.docs
+            .map((doc) => order_model.Order.fromMap(doc.id, doc.data()))
+            .toList();
+        _isLoading = false;
+        notifyListeners();
+      },
+      onError: (error) {
+        print('Error listening to user orders: $error');
+        _isLoading = false;
+        notifyListeners();
+      },
+      cancelOnError: false,
+    );
+  }
+
+  Future<void> stopUserOrdersListener() async {
+    await _userOrdersSubscription?.cancel();
+    _userOrdersSubscription = null;
   }
 
   Future<void> fetchAllOrders() async {
@@ -128,5 +162,11 @@ class OrderProvider extends ChangeNotifier {
       print('Error confirming payment: $e');
       rethrow;
     }
+  }
+
+  @override
+  void dispose() {
+    _userOrdersSubscription?.cancel();
+    super.dispose();
   }
 }

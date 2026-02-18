@@ -99,7 +99,7 @@ exports.initiateMpesaPayment = functions.https.onRequest(async (req, res) => {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        timeout: 30000
+        timeout: 60000
       }
     );
 

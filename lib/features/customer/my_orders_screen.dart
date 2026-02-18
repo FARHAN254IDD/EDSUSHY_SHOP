@@ -20,9 +20,15 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
     Future.microtask(() {
       final userId = context.read<AuthProvider>().user?.uid;
       if (userId != null) {
-        context.read<OrderProvider>().fetchUserOrders(userId);
+        context.read<OrderProvider>().listenToUserOrders(userId);
       }
     });
+  }
+
+  @override
+  void dispose() {
+    context.read<OrderProvider>().stopUserOrdersListener();
+    super.dispose();
   }
 
   @override

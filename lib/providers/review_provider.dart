@@ -21,11 +21,13 @@ class ReviewProvider extends ChangeNotifier {
       final snapshot = await _firestore
           .collection('reviews')
           .where('productId', isEqualTo: productId)
-          .orderBy('createdAt', descending: true)
           .get();
-      _productReviews = snapshot.docs
+      final reviews = snapshot.docs
           .map((doc) => Review.fromMap(doc.id, doc.data()))
           .toList();
+      // Sort by createdAt descending on client side to avoid composite index
+      reviews.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      _productReviews = reviews;
       _errorMessage = '';
       return _productReviews;
     } catch (e) {
@@ -45,11 +47,13 @@ class ReviewProvider extends ChangeNotifier {
       final snapshot = await _firestore
           .collection('reviews')
           .where('userId', isEqualTo: userId)
-          .orderBy('createdAt', descending: true)
           .get();
-      _userReviews = snapshot.docs
+      final reviews = snapshot.docs
           .map((doc) => Review.fromMap(doc.id, doc.data()))
           .toList();
+      // Sort by createdAt descending on client side to avoid composite index
+      reviews.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      _userReviews = reviews;
       _errorMessage = '';
     } catch (e) {
       _errorMessage = 'Error fetching your reviews: $e';
